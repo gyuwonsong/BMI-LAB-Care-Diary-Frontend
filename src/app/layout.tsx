@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,24 +36,20 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko" className="h-full" suppressHydrationWarning>
-      <body
-        className={[
-          geistSans.variable,
-          geistMono.variable,
-          "antialiased text-[15px] bg-background text-foreground",
-          "supports-[scrollbar-gutter]:scrollbar-gutter-stable",
-          "overscroll-y-contain",
-          "min-h-dvh flex flex-col",
-        ].join(" ")}
-      >
+      <body className="min-h-dvh flex flex-col">
         <div
           className="sticky top-0 z-50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
           style={{ paddingTop: "env(safe-area-inset-top)" }}
         >
           <Navbar />
         </div>
-        <main className="flex-1 min-h-0">{children}</main>
+
+        <main className="flex-1 grid place-items-center min-h-0 p-4">
+          {children}
+        </main>
+
         <div id="portal-root" />
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );
