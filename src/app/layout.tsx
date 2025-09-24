@@ -35,7 +35,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko" className="h-full" suppressHydrationWarning>
+    <html
+      lang="ko"
+      className={`h-full ${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-dvh flex flex-col">
         <div
           className="sticky top-0 z-50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
@@ -49,7 +53,14 @@ export default function RootLayout({
         </main>
 
         <div id="portal-root" />
-        <Toaster position="bottom-right" />
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            classNames: {
+              description: "text-xs !text-black leading-relaxed",
+            },
+          }}
+        />
       </body>
     </html>
   );
