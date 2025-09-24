@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,13 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Search,
-  ExternalLink,
-  BarChart3,
-  Users,
-  TrendingUp,
-} from "lucide-react";
+import { Search, BarChart3, Users, TrendingUp } from "lucide-react";
+import { TablePaginationBar } from "@/components/common/table-pagination-bar";
 
 export type RiskLevel = "높음" | "보통" | "낮음";
 
@@ -34,7 +28,7 @@ export interface PatientRow {
   id: string;
   name: string;
   diagnosis: string;
-  recentAnalysis: string; // YYYY-MM-DD
+  recentAnalysis: string;
   totalAnalyses: number;
   riskLevel: RiskLevel;
 }
@@ -116,37 +110,6 @@ function RiskBadge({ level }: { level: RiskLevel }) {
   return <Badge className={`rounded-sm ${cls}`}>{level}</Badge>;
 }
 
-function exportCSV(rows: PatientRow[], filename = "usage_stats.csv") {
-  const headers = [
-    "대상자 ID",
-    "환자명",
-    "진단명",
-    "최근 분석일",
-    "누적 분석 수",
-    "위험도",
-  ];
-  const data = rows.map((r) => [
-    r.id,
-    r.name,
-    r.diagnosis,
-    r.recentAnalysis,
-    String(r.totalAnalyses),
-    r.riskLevel,
-  ]);
-  const csv = [headers, ...data]
-    .map((line) =>
-      line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
-    )
-    .join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }); // BOM for Excel
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export function UsageStatistics() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRisk, setFilterRisk] = useState<"all" | RiskLevel>("all");
@@ -202,6 +165,8 @@ export function UsageStatistics() {
   }, [sorted, page, perPage]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
+  const startIdx = sorted.length ? (page - 1) * perPage + 1 : 0;
+  const endIdx = Math.min(page * perPage, sorted.length);
 
   return (
     <div className="space-y-8">
@@ -401,67 +366,15 @@ export function UsageStatistics() {
           </div>
 
           {sorted.length > 0 && (
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4">
-              <div className="text-sm text-muted-foreground text-center md:text-left">
-                <span className="inline-flex gap-1">
-                  총
-                  <span className="font-medium text-foreground">
-                    {sorted.length}
-                  </span>
-                  명 중
-                  <span className="font-medium text-foreground">
-                    {(page - 1) * perPage + 1}
-                  </span>
-                  –
-                  <span className="font-medium text-foreground">
-                    {Math.min(page * perPage, sorted.length)}
-                  </span>
-                  표시
-                </span>
-              </div>
-
-              <div className="flex items-center justify-center md:justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-sm"
-                  onClick={() => setPage(1)}
-                  disabled={page === 1}
-                >
-                  처음
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  이전
-                </Button>
-                <div className="text-sm w-16 text-center">
-                  {page} / {totalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-sm"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                >
-                  다음
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-sm"
-                  onClick={() => setPage(totalPages)}
-                  disabled={page === totalPages}
-                >
-                  마지막
-                </Button>
-              </div>
-            </div>
+            <TablePaginationBar
+              total={sorted.length}
+              page={page}
+              totalPages={totalPages}
+              startIdx={startIdx}
+              endIdx={endIdx}
+              onPageChangeAction={setPage}
+              className="mt-4"
+            />
           )}
         </CardContent>
       </Card>
