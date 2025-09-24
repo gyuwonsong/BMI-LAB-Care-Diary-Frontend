@@ -31,6 +31,7 @@ export interface UserData {
   userType: "user" | "admin";
   joinDate: string;
   lastLogin: string;
+  phone: string;
 }
 
 export interface ProfileSettingsProps {
@@ -118,26 +119,11 @@ export default function ProfileSettings({
 
   const [form, setForm] = useState({
     name: userData.name,
+    phone: userData.phone,
     organization: userData.organization,
   });
 
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
-
-  const roleBadge = useMemo(
-    () => (
-      <Badge
-        variant={userData.userType === "admin" ? "default" : "secondary"}
-        className={
-          userData.userType === "admin"
-            ? "bg-primary text-primary-foreground"
-            : "bg-secondary text-muted-foreground"
-        }
-      >
-        {userData.userType === "admin" ? "관리자" : "사용자"}
-      </Badge>
-    ),
-    [userData.userType],
-  );
 
   const handleSaveProfile = async () => {
     setIsLoading(true);
@@ -218,8 +204,8 @@ export default function ProfileSettings({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-3">
               <FieldRow
                 id="email"
                 label="이메일"
@@ -244,6 +230,20 @@ export default function ProfileSettings({
                   setForm((p) => ({ ...p, name: e.target.value }))
                 }
                 placeholder="이름을 입력하세요"
+                disabled={!isEditing}
+                className="bg-white border"
+              />
+            </FieldRow>
+
+            <FieldRow id="phone" label="전화번호">
+              <Input
+                id="phone"
+                type="text"
+                value={form.phone}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, phone: e.target.value }))
+                }
+                placeholder="전화번호를 입력하세요"
                 disabled={!isEditing}
                 className="bg-white border"
               />

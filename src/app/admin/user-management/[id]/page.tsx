@@ -14,7 +14,7 @@ const mockUserDetail = {
   id: "1",
   name: "김의사",
   email: "kim@hospital.com",
-  createdAt: "2024-05-15",
+  phone: "010-1234-5678",
   organization: "서울대학교병원",
   userType: "admin" as const,
   status: "active" as const,
@@ -247,19 +247,10 @@ export default function UserDetailPage({
                   </LabeledValue>
 
                   <LabeledValue label="이메일">{user.email}</LabeledValue>
+                  <LabeledValue label="전화번호">{user.phone}</LabeledValue>
+
                   <LabeledValue label="소속기관">
                     {user.organization}
-                  </LabeledValue>
-
-                  <LabeledValue label="가입일">
-                    {new Date(user.createdAt)
-                      .toLocaleDateString("ko-KR", {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                      })
-                      .replace(/\. /g, ".")
-                      .replace(/\.$/, "")}
                   </LabeledValue>
                   <LabeledValue label="증빙서류">
                     <DocumentLink

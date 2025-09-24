@@ -22,6 +22,7 @@ export default function SignupPage() {
     name: "",
     password: "",
     confirmPassword: "",
+    phone: "",
     organization: "",
     userType: "",
   });
@@ -127,6 +128,20 @@ export default function SignupPage() {
                 onChange={(e) =>
                   handleInputChange("confirmPassword", e.target.value)
                 }
+                className="bg-white border rounded-sm !text-xs placeholder:text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm">
+                전화번호
+              </Label>
+              <Input
+                id="phone"
+                type="text"
+                placeholder="전화번호를 입력하세요"
+                value={formData.phone}
+                onChange={(e) => handleInputChange("phone", e.target.value)}
                 className="bg-white border rounded-sm !text-xs placeholder:text-xs"
               />
             </div>

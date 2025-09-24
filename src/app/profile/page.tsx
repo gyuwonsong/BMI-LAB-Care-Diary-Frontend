@@ -16,6 +16,7 @@ export interface UserData {
   userType: UserType;
   joinDate: string;
   lastLogin: string;
+  phone: string;
 }
 
 const dummyUser: UserData = {
@@ -25,6 +26,7 @@ const dummyUser: UserData = {
   userType: "user",
   joinDate: "2025-09-01",
   lastLogin: "2025-09-18",
+  phone: "010-1234-5678",
 };
 
 export default function ProfilePage() {
