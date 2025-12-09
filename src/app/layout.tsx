@@ -1,41 +1,44 @@
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type React from "react";
+import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "돌봄일지",
-  description:
-    "희귀질환 환자·보호자 기록에서 정신 상태와 SDoH를 LLM으로 자동 추출·분석하는 서비스",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  maximumScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
+  title: "돌봄 일기",
+  description: "나의 감정을 기록하고 돌아보는 공간",
+  generator: "v0.app",
+  icons: {
+    icon: [
+      {
+        url: "/icon-light-32x32.png",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/icon-dark-32x32.png",
+        media: "(prefers-color-scheme: dark)",
+      },
+      {
+        url: "/icon.svg",
+        type: "image/svg+xml",
+      },
+    ],
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html
-      lang="ko"
-      className={`h-full ${geistSans.variable} ${geistMono.variable}`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-dvh flex flex-col">{children} </body>
+    <html lang="ko">
+      <body className={`font-sans antialiased`}>
+        {children}
+        <Toaster />
+        <Analytics />
+      </body>
     </html>
   );
 }
