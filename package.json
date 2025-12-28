@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "api:gen": "bash ./scripts/openapi-generate.sh"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@openapitools/openapi-generator-cli": "^2.26.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19.1.13",
