@@ -1,21 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { EmotionSelector } from "@/components/common/emotion-selector";
 import { SliderGroup } from "@/components/common/slider-group";
-import { type Emotion, REFLECTION_QUESTIONS, UI_TEXT } from "@/lib/constants";
+
+import { REFLECTION_QUESTIONS, UI_TEXT, type Emotion } from "@/lib/constants";
 import { formatKoreanDate } from "@/utils/date";
+import { SESSION_KEYS } from "@/lib/session-keys";
+
+import { useSearchParams } from "next/navigation";
+
+function toISODate(d: Date) {
+  return d.toISOString().substring(0, 10);
+}
+
+function isISODateString(v: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
+type DiaryDraft = {
+  emotion: Emotion;
+  content: string;
+  reflections: number[];
+  createdAtISO: string;
+};
 
 export default function DiaryWritePage() {
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get("date");
+
+  const writingDateISO = useMemo(() => {
+    if (dateParam && isISODateString(dateParam)) return dateParam;
+    return toISODate(new Date());
+  }, [dateParam]);
+
   const router = useRouter();
   const [step, setStep] = useState<"write" | "reflect">("write");
   const [emotion, setEmotion] = useState<Emotion | null>(null);
   const [content, setContent] = useState("");
+
   const [reflection1, setReflection1] = useState(5);
   const [reflection2, setReflection2] = useState(5);
   const [reflection3, setReflection3] = useState(5);
@@ -23,24 +52,45 @@ export default function DiaryWritePage() {
   const [reflection5, setReflection5] = useState(5);
   const [reflection6, setReflection6] = useState(5);
 
+  const canProceed =
+    step === "write" ? !!emotion && content.trim().length > 0 : true;
+
   const handleNext = () => {
     if (step === "write") {
+      if (!emotion || content.trim().length === 0) return;
       setStep("reflect");
-    } else {
-      console.log({ emotion, content, reflection1, reflection2 });
-      router.push("/diary/summary");
+      return;
     }
+
+    if (!emotion) {
+      setStep("write");
+      return;
+    }
+
+    const draft: DiaryDraft = {
+      emotion,
+      content: content.trim(),
+      reflections: [
+        reflection1,
+        reflection2,
+        reflection3,
+        reflection4,
+        reflection5,
+        reflection6,
+      ],
+      createdAtISO: writingDateISO,
+    };
+
+    sessionStorage.setItem(SESSION_KEYS.DIARY_DRAFT, JSON.stringify(draft));
+    router.push("/diary/summary");
   };
 
-  const canProceed =
-    step === "write" ? emotion && content.trim().length > 0 : true;
-
-  const today = formatKoreanDate(new Date());
+  const headerDateText = formatKoreanDate(new Date(writingDateISO));
 
   return (
     <div className="min-h-screen bg-secondary">
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className=" flex h-16 max-w-3xl items-center gap-4 px-6">
+        <div className="flex h-16 max-w-3xl items-center gap-4 px-6">
           <Link href="/home">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
@@ -48,13 +98,13 @@ export default function DiaryWritePage() {
           </Link>
           <h1 className="text-xl font-bold">
             {step === "write"
-              ? `오늘의 일기 (${today})`
-              : `생각 정리하기 (${today})`}
+              ? `오늘의 일기 (${headerDateText})`
+              : `생각 정리하기 (${headerDateText})`}
           </h1>
         </div>
       </header>
 
-      <main className="container max-w-5xl py-8 mx-auto">
+      <main className="container mx-auto max-w-5xl py-8">
         <div className="rounded-sm border bg-card p-8">
           {step === "write" ? (
             <div className="space-y-8">
