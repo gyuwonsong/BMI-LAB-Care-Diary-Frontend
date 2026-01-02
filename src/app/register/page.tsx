@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -13,93 +13,225 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
-import {
-  Gender,
-  GENDER_LABELS,
-  UserRole,
-  DisabilitySeverity,
-  DisabilityStatus,
-  MedicalCoverage,
-  SocialWelfareService,
-  MEDICAL_COVERAGE_LABELS,
-  SOCIAL_WELFARE_LABELS,
-} from "@/lib/constants";
-import { RegisterFormData } from "@/lib/types";
 import AddressField from "@/components/register/address-field";
-import { parseAddress, validateAddressParts } from "@/utils/address";
 import YearMonthSelect from "@/components/register/year-month-select";
+
+import {
+  getOAuthProvider,
+  getOAuthSession,
+  updateOAuthToken,
+} from "@/lib/auth-storage";
+import { decodeJwtPayload } from "@/lib/jwt";
+import { userApi } from "@/lib/api/client";
+
+import {
+  GENDER_LABELS,
+  DISABILITY_SEVERITY_LABELS,
+  DISABILITY_STATUS_LABELS,
+  MEDICAL_COVERAGE_LABELS,
+  PROVIDER_LABELS,
+} from "@/lib/register-enums";
+
+import {
+  type UserRegisterRequest,
+  UserRegisterRequestRoleEnum,
+  UserRegisterRequestGenderEnum,
+  UserRegisterRequestMedicalCoverageEnum,
+  UserRegisterRequestDisabilityStatusEnum,
+  UserRegisterRequestDisabilitySeverityEnum,
+} from "@/generated-api";
+import {
+  SOCIAL_WELFARE_LABELS,
+  type SocialWelfareService,
+} from "@/lib/constants";
+
+type RegisterFormData = Omit<
+  UserRegisterRequest,
+  "birthDate" | "specialCaseRegisteredDate" | "socialWelfareServiceLabels"
+> & {
+  birthDate: string;
+  specialCaseRegisteredDate?: string;
+  socialWelfareServiceLabels: SocialWelfareService[];
+};
 
 export default function RegisterPage() {
   const router = useRouter();
-  const socialProvider = "google";
+
+  const { type, token } = useMemo(() => getOAuthSession(), []);
+  const provider = useMemo(() => getOAuthProvider(), []);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [readonlyEmail, setReadonlyEmail] = useState("");
 
   const [formData, setFormData] = useState<RegisterFormData>({
-    name: "홍길동",
-    email: "hong@example.com",
-    gender: Gender.MALE,
-    birth: "",
+    name: "",
+    role: UserRegisterRequestRoleEnum.User,
+    gender: UserRegisterRequestGenderEnum.Male,
+    birthDate: "",
     address: "",
-    role: UserRole.USER,
 
-    religion: "",
-    educationJob: "",
-
-    mainDiagnosis: "",
-    education: "",
-    historyDiagnosis: "",
-    historyDate: "",
-    historyHospital: "",
-    mainSymptoms: "",
+    primaryDiagnosis: "",
+    educationBeforeOnset: "",
+    previousDiagnosis: "",
+    diagnosisYearMonth: "",
+    diagnosisHospital: "",
+    chiefComplaint: "",
     currentHospital: "",
     currentResidence: "",
-
-    medicalCoverage: "",
+    medicalCoverage: undefined,
 
     specialCaseRegistered: false,
     specialCaseRegisteredDate: "",
 
     disabilityRegistered: false,
-    disabilityStatus: "NOT_REGISTERED",
+    disabilityStatus: UserRegisterRequestDisabilityStatusEnum.NotRegistered,
     disabilityType: "",
-    disabilitySeverity: "",
+    disabilitySeverity: undefined,
 
-    socialWelfareServices: [],
+    socialWelfareServiceLabels: [],
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const parts = parseAddress(formData.address);
-    const v = validateAddressParts(parts);
-    if (!v.ok) {
-      alert(v.message);
+  useEffect(() => {
+    if (!token || type !== "NEW") {
+      router.replace("/login");
       return;
     }
 
-    document.cookie = `userRole=${formData.role}; path=/; max-age=${60 * 60 * 24 * 7}`;
+    type JwtPayload = {
+      name?: string;
+      email?: string;
+      userName?: string;
+      userEmail?: string;
+    };
+    const payload = decodeJwtPayload<JwtPayload>(token);
 
-    if (formData.role === UserRole.ADMIN) router.push("/admin/users");
-    else router.push("/register/questions");
-  };
+    const nextEmail = payload?.email ?? payload?.userEmail ?? "";
 
-  const providerLabels: Record<string, string> = {
-    google: "구글",
-    kakao: "카카오",
-    naver: "네이버",
-  };
+    setReadonlyEmail(nextEmail);
+  }, [router, token, type]);
 
-  const isAdmin = formData.role === UserRole.ADMIN;
+  const isAdmin = formData.role === UserRegisterRequestRoleEnum.Admin;
+
+  const isBaseValid =
+    formData.name.trim().length > 0 &&
+    readonlyEmail.trim().length > 0 &&
+    !!formData.birthDate &&
+    formData.address.trim().length > 0;
+
+  const userExtraValid = true;
+
+  const isFormValid = isAdmin ? isBaseValid : isBaseValid && userExtraValid;
 
   const toggleSocialService = (key: SocialWelfareService) => {
     setFormData((prev) => {
-      const exists = prev.socialWelfareServices.includes(key);
+      const list = prev.socialWelfareServiceLabels;
+      const exists = list.includes(key);
+
       return {
         ...prev,
-        socialWelfareServices: exists
-          ? prev.socialWelfareServices.filter((v) => v !== key)
-          : [...prev.socialWelfareServices, key],
+        socialWelfareServiceLabels: exists
+          ? list.filter((v) => v !== key)
+          : [...list, key],
       };
     });
+  };
+
+  const cleanEmptyStringToUndefined = <T extends object>(obj: T): T => {
+    const out = { ...obj } as Record<string, unknown>;
+    for (const k of Object.keys(out)) {
+      if (out[k] === "") out[k] = undefined;
+    }
+    return out as T;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    if (!formData.birthDate) return;
+
+    setIsSubmitting(true);
+    try {
+      const isAdmin = formData.role === UserRegisterRequestRoleEnum.Admin;
+
+      const baseRequired = {
+        name: formData.name,
+        role: formData.role,
+        gender: formData.gender,
+        birthDate: new Date(formData.birthDate),
+        address: formData.address,
+      } satisfies Pick<
+        UserRegisterRequest,
+        "name" | "role" | "gender" | "birthDate" | "address"
+      >;
+
+      const userRegisterRequest: UserRegisterRequest = isAdmin
+        ? {
+            ...baseRequired,
+
+            primaryDiagnosis: undefined,
+            educationBeforeOnset: undefined,
+            previousDiagnosis: undefined,
+            diagnosisYearMonth: undefined,
+            diagnosisHospital: undefined,
+            chiefComplaint: undefined,
+            currentHospital: undefined,
+            currentResidence: undefined,
+            medicalCoverage: undefined,
+
+            specialCaseRegistered: undefined,
+            specialCaseRegisteredDate: undefined,
+
+            disabilityRegistered: undefined,
+            disabilityStatus: undefined,
+            disabilityType: undefined,
+            disabilitySeverity: undefined,
+
+            socialWelfareServiceLabels: [],
+          }
+        : cleanEmptyStringToUndefined<UserRegisterRequest>({
+            ...baseRequired,
+
+            primaryDiagnosis: formData.primaryDiagnosis,
+            educationBeforeOnset: formData.educationBeforeOnset,
+            previousDiagnosis: formData.previousDiagnosis,
+            diagnosisYearMonth: formData.diagnosisYearMonth,
+            diagnosisHospital: formData.diagnosisHospital,
+            chiefComplaint: formData.chiefComplaint,
+            currentHospital: formData.currentHospital,
+            currentResidence: formData.currentResidence,
+            medicalCoverage: formData.medicalCoverage,
+
+            specialCaseRegistered: formData.specialCaseRegistered,
+            specialCaseRegisteredDate: formData.specialCaseRegistered
+              ? formData.specialCaseRegisteredDate
+                ? new Date(formData.specialCaseRegisteredDate)
+                : undefined
+              : undefined,
+
+            disabilityRegistered: formData.disabilityRegistered,
+            disabilityStatus: formData.disabilityStatus,
+            disabilityType: formData.disabilityType,
+            disabilitySeverity: formData.disabilitySeverity,
+
+            socialWelfareServiceLabels:
+              formData.socialWelfareServiceLabels ?? [],
+          });
+
+      const res = await userApi.register({ userRegisterRequest });
+
+      const nextToken = res.data?.accessToken;
+      if (nextToken) updateOAuthToken(nextToken);
+
+      if (isAdmin) router.push("/admin/users");
+      else router.push("/register/questions");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -120,8 +252,9 @@ export default function RegisterPage() {
                 * 표시는 필수 입력 항목입니다.
               </p>
             </div>
+
             <Badge variant="secondary" className="rounded-sm">
-              {providerLabels[socialProvider]} 계정
+              {provider ? PROVIDER_LABELS[provider] : "소셜"} 계정
             </Badge>
           </CardHeader>
 
@@ -137,10 +270,13 @@ export default function RegisterPage() {
                     className="bg-white"
                     checked={isAdmin}
                     onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        role: checked === true ? UserRole.ADMIN : UserRole.USER,
-                      })
+                      setFormData((prev) => ({
+                        ...prev,
+                        role:
+                          checked === true
+                            ? UserRegisterRequestRoleEnum.Admin
+                            : UserRegisterRequestRoleEnum.User,
+                      }))
                     }
                   />
                   <Label
@@ -152,7 +288,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* 기본  정보 - 필수 */}
+              {/* 기본 정보 */}
               <section className="space-y-5">
                 <h2 className="text-lg font-bold">기본 정보</h2>
 
@@ -163,8 +299,11 @@ export default function RegisterPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    readOnly
-                    className="bg-muted"
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    placeholder="이름을 입력하세요"
+                    autoComplete="name"
                   />
                 </div>
 
@@ -174,7 +313,7 @@ export default function RegisterPage() {
                   </Label>
                   <Input
                     id="email"
-                    value={formData.email}
+                    value={readonlyEmail}
                     readOnly
                     className="bg-muted"
                   />
@@ -186,8 +325,8 @@ export default function RegisterPage() {
                   </Label>
                   <RadioGroup
                     value={formData.gender}
-                    onValueChange={(value: Gender) =>
-                      setFormData({ ...formData, gender: value })
+                    onValueChange={(value: UserRegisterRequestGenderEnum) =>
+                      setFormData((prev) => ({ ...prev, gender: value }))
                     }
                     className="flex flex-row space-x-6"
                   >
@@ -201,15 +340,18 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="birth">
+                  <Label htmlFor="birthDate">
                     생년월일 <span className="text-destructive">*</span>
                   </Label>
                   <Input
-                    id="birth"
+                    id="birthDate"
                     type="date"
-                    value={formData.birth}
+                    value={formData.birthDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, birth: e.target.value })
+                      setFormData((prev) => ({
+                        ...prev,
+                        birthDate: e.target.value,
+                      }))
                     }
                     required
                   />
@@ -218,40 +360,15 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                   <AddressField
                     value={formData.address}
-                    onChange={(next) =>
-                      setFormData({ ...formData, address: next })
+                    onChangeAction={(next) =>
+                      setFormData((prev) => ({ ...prev, address: next }))
                     }
                     required
                   />
                 </div>
-
-                {/* 기본 정보  - 선택 (종교, 학력/직업) */}
-                <div className="space-y-2">
-                  <Label htmlFor="religion">종교</Label>
-                  <Input
-                    id="religion"
-                    value={formData.religion}
-                    onChange={(e) =>
-                      setFormData({ ...formData, religion: e.target.value })
-                    }
-                    placeholder="예: 무교, 기독교, 불교 등"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="educationJob">학력/직업</Label>
-                  <Input
-                    id="educationJob"
-                    value={formData.educationJob}
-                    onChange={(e) =>
-                      setFormData({ ...formData, educationJob: e.target.value })
-                    }
-                    placeholder="예: 대학교 재학, 회사원 등"
-                  />
-                </div>
               </section>
 
-              {/* 환자 정보 (유저만)  */}
+              {/* 환자 정보 (USER Only) */}
               {!isAdmin && (
                 <section className="space-y-5 pt-4 border-t">
                   <div className="flex flex-row items-center space-x-2">
@@ -262,42 +379,45 @@ export default function RegisterPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="mainDiagnosis">주 진단명</Label>
+                    <Label htmlFor="primaryDiagnosis">주 진단명</Label>
                     <Input
-                      id="mainDiagnosis"
-                      value={formData.mainDiagnosis}
+                      id="primaryDiagnosis"
+                      value={formData.primaryDiagnosis ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          mainDiagnosis: e.target.value,
-                        })
+                        setFormData((prev) => ({
+                          ...prev,
+                          primaryDiagnosis: e.target.value,
+                        }))
                       }
                       placeholder="주 진단명을 입력하세요"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="education">학력 (발병 전)</Label>
+                    <Label htmlFor="educationBeforeOnset">학력 (발병 전)</Label>
                     <Input
-                      id="education"
-                      value={formData.education}
+                      id="educationBeforeOnset"
+                      value={formData.educationBeforeOnset ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, education: e.target.value })
+                        setFormData((prev) => ({
+                          ...prev,
+                          educationBeforeOnset: e.target.value,
+                        }))
                       }
                       placeholder="예: 대학교 4학년 재학, 고졸 등"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="historyDiagnosis">병력 - 진단명</Label>
+                    <Label htmlFor="previousDiagnosis">병력 - 진단명</Label>
                     <Input
-                      id="historyDiagnosis"
-                      value={formData.historyDiagnosis}
+                      id="previousDiagnosis"
+                      value={formData.previousDiagnosis ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          historyDiagnosis: e.target.value,
-                        })
+                        setFormData((prev) => ({
+                          ...prev,
+                          previousDiagnosis: e.target.value,
+                        }))
                       }
                       placeholder="과거 진단명을 입력하세요"
                     />
@@ -305,43 +425,43 @@ export default function RegisterPage() {
 
                   <YearMonthSelect
                     label="병력 - 진단받은 시기"
-                    value={formData.historyDate}
-                    onChange={(next) =>
+                    value={formData.diagnosisYearMonth ?? ""}
+                    onChangeAction={(next) =>
                       setFormData((prev) =>
-                        prev.historyDate === next
+                        prev.diagnosisYearMonth === next
                           ? prev
-                          : { ...prev, historyDate: next },
+                          : { ...prev, diagnosisYearMonth: next },
                       )
                     }
                   />
 
                   <div className="space-y-2">
-                    <Label htmlFor="historyHospital">
+                    <Label htmlFor="diagnosisHospital">
                       병력 - 진단받은 병원
                     </Label>
                     <Input
-                      id="historyHospital"
-                      value={formData.historyHospital}
+                      id="diagnosisHospital"
+                      value={formData.diagnosisHospital ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          historyHospital: e.target.value,
-                        })
+                        setFormData((prev) => ({
+                          ...prev,
+                          diagnosisHospital: e.target.value,
+                        }))
                       }
                       placeholder="병원명을 입력하세요"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="mainSymptoms">주증상</Label>
+                    <Label htmlFor="chiefComplaint">주증상</Label>
                     <Input
-                      id="mainSymptoms"
-                      value={formData.mainSymptoms}
+                      id="chiefComplaint"
+                      value={formData.chiefComplaint ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          mainSymptoms: e.target.value,
-                        })
+                        setFormData((prev) => ({
+                          ...prev,
+                          chiefComplaint: e.target.value,
+                        }))
                       }
                       placeholder="주요 증상을 입력하세요"
                     />
@@ -353,12 +473,12 @@ export default function RegisterPage() {
                     </Label>
                     <Input
                       id="currentHospital"
-                      value={formData.currentHospital}
+                      value={formData.currentHospital ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           currentHospital: e.target.value,
-                        })
+                        }))
                       }
                       placeholder="현재 다니는 병원을 입력하세요"
                     />
@@ -368,12 +488,12 @@ export default function RegisterPage() {
                     <Label htmlFor="currentResidence">현재 거주하는 장소</Label>
                     <Input
                       id="currentResidence"
-                      value={formData.currentResidence}
+                      value={formData.currentResidence ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           currentResidence: e.target.value,
-                        })
+                        }))
                       }
                       placeholder="예: 본가, 그룹홈, 자립주택 등"
                     />
@@ -383,9 +503,14 @@ export default function RegisterPage() {
                   <div className="space-y-2 pt-2">
                     <Label>의료보장</Label>
                     <RadioGroup
-                      value={formData.medicalCoverage}
-                      onValueChange={(value: MedicalCoverage) =>
-                        setFormData({ ...formData, medicalCoverage: value })
+                      value={formData.medicalCoverage ?? ""}
+                      onValueChange={(
+                        value: UserRegisterRequestMedicalCoverageEnum,
+                      ) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          medicalCoverage: value,
+                        }))
                       }
                       className="flex flex-wrap gap-4"
                     >
@@ -417,16 +542,16 @@ export default function RegisterPage() {
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="specialCaseRegistered"
-                        checked={formData.specialCaseRegistered}
+                        checked={!!formData.specialCaseRegistered}
                         onCheckedChange={(checked) =>
-                          setFormData({
-                            ...formData,
+                          setFormData((prev) => ({
+                            ...prev,
                             specialCaseRegistered: checked === true,
                             specialCaseRegisteredDate:
                               checked === true
-                                ? formData.specialCaseRegisteredDate
+                                ? prev.specialCaseRegisteredDate
                                 : "",
-                          })
+                          }))
                         }
                       />
                       <Label
@@ -445,12 +570,12 @@ export default function RegisterPage() {
                         <Input
                           id="specialCaseRegisteredDate"
                           type="date"
-                          value={formData.specialCaseRegisteredDate}
+                          value={formData.specialCaseRegisteredDate ?? ""}
                           onChange={(e) =>
-                            setFormData({
-                              ...formData,
+                            setFormData((prev) => ({
+                              ...prev,
                               specialCaseRegisteredDate: e.target.value,
-                            })
+                            }))
                           }
                           placeholder="등록일을 입력하세요"
                         />
@@ -458,29 +583,29 @@ export default function RegisterPage() {
                     )}
                   </div>
 
-                  {/* 장애 등급 */}
+                  {/* 장애 */}
                   <div className="space-y-3">
                     <Label>장애 등급</Label>
 
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="disabilityRegistered"
-                        checked={formData.disabilityRegistered}
+                        checked={!!formData.disabilityRegistered}
                         onCheckedChange={(checked) =>
-                          setFormData({
-                            ...formData,
+                          setFormData((prev) => ({
+                            ...prev,
                             disabilityRegistered: checked === true,
                             disabilityStatus:
                               checked === true
-                                ? formData.disabilityStatus
-                                : "NOT_REGISTERED",
+                                ? prev.disabilityStatus
+                                : UserRegisterRequestDisabilityStatusEnum.NotRegistered,
                             disabilityType:
-                              checked === true ? formData.disabilityType : "",
+                              checked === true ? prev.disabilityType : "",
                             disabilitySeverity:
                               checked === true
-                                ? formData.disabilitySeverity
-                                : "",
-                          })
+                                ? prev.disabilitySeverity
+                                : undefined,
+                          }))
                         }
                       />
                       <Label
@@ -496,76 +621,65 @@ export default function RegisterPage() {
                         <div className="space-y-2">
                           <Label>진행 상태</Label>
                           <RadioGroup
-                            value={formData.disabilityStatus}
-                            onValueChange={(value: DisabilityStatus) =>
-                              setFormData({
-                                ...formData,
+                            value={
+                              formData.disabilityStatus ??
+                              UserRegisterRequestDisabilityStatusEnum.NotRegistered
+                            }
+                            onValueChange={(
+                              value: UserRegisterRequestDisabilityStatusEnum,
+                            ) =>
+                              setFormData((prev) => ({
+                                ...prev,
                                 disabilityStatus: value,
                                 disabilityType:
-                                  value === "REGISTERED"
-                                    ? formData.disabilityType
+                                  value ===
+                                  UserRegisterRequestDisabilityStatusEnum.Registered
+                                    ? prev.disabilityType
                                     : "",
                                 disabilitySeverity:
-                                  value === "REGISTERED"
-                                    ? formData.disabilitySeverity
-                                    : "",
-                              })
+                                  value ===
+                                  UserRegisterRequestDisabilityStatusEnum.Registered
+                                    ? prev.disabilitySeverity
+                                    : undefined,
+                              }))
                             }
                             className="flex flex-wrap gap-4"
                           >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem
-                                value="REGISTERED"
-                                id="disability-status-registered"
-                              />
-                              <Label
-                                htmlFor="disability-status-registered"
-                                className="font-normal"
-                              >
-                                등록
-                              </Label>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem
-                                value="IN_PROGRESS"
-                                id="disability-status-inprogress"
-                              />
-                              <Label
-                                htmlFor="disability-status-inprogress"
-                                className="font-normal"
-                              >
-                                진행 중
-                              </Label>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem
-                                value="NOT_REGISTERED"
-                                id="disability-status-notregistered"
-                              />
-                              <Label
-                                htmlFor="disability-status-notregistered"
-                                className="font-normal"
-                              >
-                                미등록
-                              </Label>
-                            </div>
+                            {Object.entries(DISABILITY_STATUS_LABELS).map(
+                              ([value, label]) => (
+                                <div
+                                  key={value}
+                                  className="flex items-center space-x-2"
+                                >
+                                  <RadioGroupItem
+                                    value={value}
+                                    id={`disability-status-${value}`}
+                                  />
+                                  <Label
+                                    htmlFor={`disability-status-${value}`}
+                                    className="font-normal"
+                                  >
+                                    {label}
+                                  </Label>
+                                </div>
+                              ),
+                            )}
                           </RadioGroup>
                         </div>
 
-                        {formData.disabilityStatus === "REGISTERED" && (
+                        {formData.disabilityStatus ===
+                          UserRegisterRequestDisabilityStatusEnum.Registered && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="disabilityType">종류</Label>
                               <Input
                                 id="disabilityType"
-                                value={formData.disabilityType}
+                                value={formData.disabilityType ?? ""}
                                 onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
+                                  setFormData((prev) => ({
+                                    ...prev,
                                     disabilityType: e.target.value,
-                                  })
+                                  }))
                                 }
                                 placeholder="예: 지체, 시각, 청각 등"
                               />
@@ -574,40 +688,36 @@ export default function RegisterPage() {
                             <div className="space-y-2">
                               <Label>정도</Label>
                               <RadioGroup
-                                value={formData.disabilitySeverity}
-                                onValueChange={(value: DisabilitySeverity) =>
-                                  setFormData({
-                                    ...formData,
+                                value={formData.disabilitySeverity ?? ""}
+                                onValueChange={(
+                                  value: UserRegisterRequestDisabilitySeverityEnum,
+                                ) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
                                     disabilitySeverity: value,
-                                  })
+                                  }))
                                 }
                                 className="flex flex-wrap gap-4"
                               >
-                                <div className="flex items-center space-x-2 mt-2.5">
-                                  <RadioGroupItem
-                                    value="SEVERE"
-                                    id="severity-severe"
-                                  />
-                                  <Label
-                                    htmlFor="severity-severe"
-                                    className="font-normal"
-                                  >
-                                    심한 장애
-                                  </Label>
-                                </div>
-
-                                <div className="flex items-center space-x-2 mt-2.5">
-                                  <RadioGroupItem
-                                    value="NOT_SEVERE"
-                                    id="severity-notsevere"
-                                  />
-                                  <Label
-                                    htmlFor="severity-notsevere"
-                                    className="font-normal"
-                                  >
-                                    심하지 않은 장애
-                                  </Label>
-                                </div>
+                                {Object.entries(DISABILITY_SEVERITY_LABELS).map(
+                                  ([value, label]) => (
+                                    <div
+                                      key={value}
+                                      className="flex items-center space-x-2 mt-2.5"
+                                    >
+                                      <RadioGroupItem
+                                        value={value}
+                                        id={`severity-${value}`}
+                                      />
+                                      <Label
+                                        htmlFor={`severity-${value}`}
+                                        className="font-normal"
+                                      >
+                                        {label}
+                                      </Label>
+                                    </div>
+                                  ),
+                                )}
                               </RadioGroup>
                             </div>
                           </div>
@@ -624,7 +734,7 @@ export default function RegisterPage() {
                         ([key, label]) => {
                           const k = key as SocialWelfareService;
                           const checked =
-                            formData.socialWelfareServices.includes(k);
+                            formData.socialWelfareServiceLabels.includes(k);
 
                           return (
                             <div
@@ -652,9 +762,15 @@ export default function RegisterPage() {
               )}
 
               <div className="space-y-3 pt-2">
-                <Button type="submit" className="w-full" size="lg">
-                  다음
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={isSubmitting || !isFormValid}
+                >
+                  {isSubmitting ? "처리 중..." : "다음"}
                 </Button>
+
                 <p className="text-center text-sm text-muted-foreground">
                   이미 계정이 있으신가요?{" "}
                   <Link
