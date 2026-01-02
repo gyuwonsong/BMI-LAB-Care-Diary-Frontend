@@ -24,14 +24,14 @@ import { buildDetail } from "@/utils/address";
 
 type Props = {
   value: string; // formData.address (최종 저장 문자열)
-  onChange: (next: string) => void;
+  onChangeAction: (next: string) => void;
   required?: boolean;
   disabled?: boolean;
 };
 
 export default function AddressField({
   value,
-  onChange,
+  onChangeAction,
   required = false,
   disabled = false,
 }: Props) {
@@ -49,9 +49,9 @@ export default function AddressField({
 
   const emitIfChanged = useCallback(
     (next: string) => {
-      if (next !== value) onChange(next);
+      if (next !== value) onChangeAction(next);
     },
-    [onChange, value],
+    [onChangeAction, value],
   );
 
   const buildStorageDetail = useCallback(

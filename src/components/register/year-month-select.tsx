@@ -13,7 +13,7 @@ import {
 type Props = {
   label: string;
   value: string;
-  onChange: (next: string) => void;
+  onChangeAction: (next: string) => void;
   yearCount?: number;
   fromYear?: number;
   disabled?: boolean;
@@ -31,7 +31,7 @@ function getMonth(v: string) {
 export default function YearMonthSelect({
   label,
   value,
-  onChange,
+  onChangeAction,
   yearCount = 60,
   fromYear,
   disabled = false,
@@ -61,7 +61,7 @@ export default function YearMonthSelect({
           value={y}
           onValueChange={(year) => {
             const nextMonth = m || "01";
-            onChange(`${year}-${nextMonth}`);
+            onChangeAction(`${year}-${nextMonth}`);
           }}
           disabled={disabled}
         >
@@ -86,7 +86,7 @@ export default function YearMonthSelect({
           value={m}
           onValueChange={(month) => {
             const nextYear = y || years[0];
-            onChange(`${nextYear}-${month}`);
+            onChangeAction(`${nextYear}-${month}`);
           }}
           disabled={disabled || !y}
         >
