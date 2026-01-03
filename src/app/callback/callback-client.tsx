@@ -3,10 +3,18 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { setOAuthSession } from "@/lib/auth-storage";
+import { decodeJwtPayload } from "@/lib/jwt";
 import type { OAuthType } from "@/lib/auth-storage";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const isOAuthType = (v: string): v is OAuthType =>
   v === "SUCCESS" || v === "NEW" || v === "DUPLICATE_EMAIL";
+
+type JwtPayload = {
+  role?: "USER" | "ADMIN";
+  exp?: number;
+};
 
 export default function CallbackClient() {
   const router = useRouter();
@@ -16,22 +24,52 @@ export default function CallbackClient() {
     const type = sp.get("type");
     const token = sp.get("token");
 
-    if (!type || !token || !isOAuthType(type)) {
-      router.replace("/login?error=invalid_callback");
+    if (type && token && isOAuthType(type)) {
+      setOAuthSession(type, token);
+
+      window.history.replaceState(
+        {},
+        "",
+        `/callback?type=${encodeURIComponent(type)}`,
+      );
+
+      if (type === "SUCCESS") {
+        const payload = decodeJwtPayload<JwtPayload>(token);
+
+        if (payload?.role === "ADMIN") {
+          router.replace("/admin/users");
+        } else {
+          router.replace("/home");
+        }
+        return;
+      }
+
+      if (type === "NEW") {
+        router.replace("/register");
+        return;
+      }
+
+      router.replace("/login/duplicate-email");
       return;
     }
 
-    setOAuthSession(type, token);
+    const code = sp.get("code");
+    const state = sp.get("state");
 
-    window.history.replaceState(
-      {},
-      "",
-      `/callback?type=${encodeURIComponent(type)}`,
-    );
+    if (code) {
+      const exchangeUrl = new URL(`${API_BASE}/oauth2/naver/exchange`);
+      exchangeUrl.searchParams.set("code", code);
+      if (state) exchangeUrl.searchParams.set("state", state);
+      exchangeUrl.searchParams.set(
+        "redirect",
+        `${window.location.origin}/callback`,
+      );
 
-    if (type === "SUCCESS") router.replace("/home");
-    else if (type === "NEW") router.replace("/register");
-    else router.replace("/login/duplicate-email");
+      window.location.href = exchangeUrl.toString();
+      return;
+    }
+
+    router.replace("/login?error=invalid_callback");
   }, [router, sp]);
 
   return null;
