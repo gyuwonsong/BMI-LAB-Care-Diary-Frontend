@@ -1,11 +1,4 @@
-import type {
-  UserRole,
-  Gender,
-  DisabilitySeverity,
-  DisabilityStatus,
-  MedicalCoverage,
-  SocialWelfareService,
-} from "./constants";
+import type { UserRole, Gender } from "./constants";
 
 export interface User {
   id: string;
@@ -89,43 +82,3 @@ export interface AngerResponse {
   q23: number;
   q24: number;
 }
-
-export type RegisterFormData = {
-  // 기본 정보 - 필수 입력
-  name: string;
-  email: string;
-  gender: Gender;
-  birth: string;
-  address: string;
-  role: UserRole;
-
-  // 기본 정보 - 선택 입력
-  religion: string;
-  educationJob: string;
-
-  // 환자 정보
-  mainDiagnosis: string;
-  education: string;
-  historyDiagnosis: string;
-  historyDate: string;
-  historyHospital: string;
-  mainSymptoms: string;
-  currentHospital: string;
-  currentResidence: string;
-
-  // 의료보장
-  medicalCoverage: MedicalCoverage;
-
-  // 산정특례
-  specialCaseRegistered: boolean;
-  specialCaseRegisteredDate: string;
-
-  // 장애등급
-  disabilityRegistered: boolean; // "등록" 체크박스 역할
-  disabilityStatus: DisabilityStatus; // 등록(종류)/진행중/미등록 중 택1
-  disabilityType: string; // 등록(종류:)
-  disabilitySeverity: DisabilitySeverity; // 심한/심하지 않은
-
-  // 사회복지서비스 (복수 선택)
-  socialWelfareServices: SocialWelfareService[];
-};
