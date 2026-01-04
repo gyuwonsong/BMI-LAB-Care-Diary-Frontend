@@ -5,6 +5,7 @@ const COOKIE_NAME = "cd_token";
 
 function isPublicPath(pathname: string) {
   return (
+    pathname === "/" ||
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
     pathname === "/register" ||

@@ -21,55 +21,64 @@ export default function CallbackClient() {
   const sp = useSearchParams();
 
   useEffect(() => {
-    const type = sp.get("type");
-    const token = sp.get("token");
+    const run = async () => {
+      const type = sp.get("type");
+      const token = sp.get("token");
 
-    if (type && token && isOAuthType(type)) {
-      setOAuthSession(type, token);
+      if (type && token && isOAuthType(type)) {
+        setOAuthSession(type, token);
 
-      window.history.replaceState(
-        {},
-        "",
-        `/callback?type=${encodeURIComponent(type)}`,
-      );
+        window.history.replaceState(
+          {},
+          "",
+          `/callback?type=${encodeURIComponent(type)}`,
+        );
 
-      if (type === "SUCCESS") {
-        const payload = decodeJwtPayload<JwtPayload>(token);
+        if (type === "SUCCESS") {
+          const payload = decodeJwtPayload<JwtPayload>(token);
 
-        if (payload?.role === "ADMIN") {
-          router.replace("/admin/users");
-        } else {
-          router.replace("/home");
+          await fetch("/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          });
+
+          window.location.assign(
+            payload?.role === "ADMIN" ? "/admin/users" : "/home",
+          );
+
+          return;
         }
+
+        if (type === "NEW") {
+          router.replace("/register");
+          return;
+        }
+
+        router.replace("/login/duplicate-email");
         return;
       }
 
-      if (type === "NEW") {
-        router.replace("/register");
+      const code = sp.get("code");
+      const state = sp.get("state");
+
+      if (code) {
+        const exchangeUrl = new URL(`${API_BASE}/oauth2/naver/exchange`);
+        exchangeUrl.searchParams.set("code", code);
+        if (state) exchangeUrl.searchParams.set("state", state);
+        exchangeUrl.searchParams.set(
+          "redirect",
+          `${window.location.origin}/callback`,
+        );
+
+        window.location.href = exchangeUrl.toString();
         return;
       }
 
-      router.replace("/login/duplicate-email");
-      return;
-    }
+      router.replace("/login?error=invalid_callback");
+    };
 
-    const code = sp.get("code");
-    const state = sp.get("state");
-
-    if (code) {
-      const exchangeUrl = new URL(`${API_BASE}/oauth2/naver/exchange`);
-      exchangeUrl.searchParams.set("code", code);
-      if (state) exchangeUrl.searchParams.set("state", state);
-      exchangeUrl.searchParams.set(
-        "redirect",
-        `${window.location.origin}/callback`,
-      );
-
-      window.location.href = exchangeUrl.toString();
-      return;
-    }
-
-    router.replace("/login?error=invalid_callback");
+    void run();
   }, [router, sp]);
 
   return null;

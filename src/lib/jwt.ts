@@ -1,27 +1,28 @@
 type JwtPayload = Record<string, unknown>;
 
-function base64UrlToUint8Array(base64Url: string) {
+function base64UrlToString(base64Url: string): string {
   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
   const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+
+  if (typeof window === "undefined") {
+    return Buffer.from(padded, "base64").toString("utf-8");
+  }
 
   const binary = atob(padded);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
+  return new TextDecoder().decode(bytes);
 }
 
 export function decodeJwtPayload<T extends JwtPayload = JwtPayload>(
   token: string,
 ): T | null {
-  if (typeof window === "undefined") return null;
-
   const raw = token.replace(/^Bearer\s+/i, "").trim();
   const parts = raw.split(".");
   if (parts.length !== 3) return null;
 
   try {
-    const bytes = base64UrlToUint8Array(parts[1]);
-    const json = new TextDecoder().decode(bytes);
+    const json = base64UrlToString(parts[1]);
     return JSON.parse(json) as T;
   } catch (e) {
     console.error("JWT decode failed:", e);
