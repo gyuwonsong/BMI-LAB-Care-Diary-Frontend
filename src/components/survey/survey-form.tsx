@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -8,154 +10,147 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-import {
-  ScaleType,
-  SCALE_LABELS,
-  anxietyQuestions,
-  depressionQuestions,
-  angerQuestions,
-} from "@/lib/constants";
+import { scaleQuestionApi } from "@/lib/api/client";
 
-const SCALE_OPTIONS = [
-  "전혀 아니다",
-  "가끔 그렇다",
-  "자주 그렇다",
-  "거의 언제나 그렇다",
-] as const;
+import type {
+  CommonResponseScaleQuestionFindAllResponse,
+  ScaleQuestionDto,
+  ScaleQuestionDtoScaleCategoryEnum,
+  ScaleQuestionUserAnswerItem,
+  ScaleQuestionUserAnswerRegisterRequest,
+} from "@/generated-api";
 
-const SURVEY_GUIDE_TEXT: Record<ScaleType, string> = {
-  [ScaleType.ANXIETY]:
-    "다음은 귀하의 감정 상태를 이해하기 위한 설문입니다. 아래의 항목을 읽어보시고, 지난 일주일 동안 귀하가 경험한 감정과 가장 가까운 해당란에 체크해 주시기 바랍니다. 응답하실 때, 너무 오랫동안 생각하지 마십시오. 깊이 생각하시는 것보다 바로 떠오르는 답이 더 정확한 것일 수 있습니다.",
-  [ScaleType.DEPRESSION]:
-    "다음은 귀하의 우울 정도에 대한 사항을 체크하기 위한 것입니다. 최근 일주일 간 환자가 느끼고 행동한 것을 가장 잘 나타낸다고 생각되는 문항의 칸에 체크하여 주시기 바랍니다.",
-  [ScaleType.ANGER]:
-    "지난 일주일 동안 무엇을 하며 지냈는지, 어떤 경험을 했는지를 생각해 주십시오. 이후, 다음에 제시되는 감정들을 얼마나 자주 느꼈는지 해당하는 곳에 표시하여 주시기 바랍니다.",
+type SurveyStep = ScaleQuestionDtoScaleCategoryEnum;
+export type SurveyMode = "REGISTER" | "SESSION";
+
+const STEP_ORDER: SurveyStep[] = ["ANGER", "ANXIETY_DEPRESSION"];
+
+const STEP_LABEL: Record<SurveyStep, string> = {
+  ANGER: "분노 설문",
+  ANXIETY_DEPRESSION: "우울·불안 설문",
 };
 
-export type SurveyMode = "register" | "session";
-
-export type SurveyResultPayload = {
-  anxietyAnswers: number[];
-  depressionAnswers: number[];
-  angerAnswers: number[];
+const STEP_GUIDE: Record<SurveyStep, string> = {
+  ANGER:
+    "지난 일주일 동안의 경험을 떠올리며, 각 문항의 감정을 얼마나 느꼈는지 선택해 주세요.",
+  ANXIETY_DEPRESSION:
+    "지난 일주일 동안의 상태를 기준으로, 각 문항을 읽고 가장 가까운 선택지를 골라 주세요.",
 };
 
-interface SurveyFormProps {
-  mode: SurveyMode;
-  onComplete: (payload: SurveyResultPayload) => void;
-  initialScale?: ScaleType;
+const MODE_BADGE: Record<SurveyMode, { label: string; sub: string }> = {
+  REGISTER: { label: "회원가입 설문", sub: "초기 상태 확인" },
+  SESSION: { label: "정기 설문 (8회기 당 1번)", sub: "정기 척도 평가" },
+};
+
+function sortByQuestionNumber(a: ScaleQuestionDto, b: ScaleQuestionDto) {
+  return a.questionNumber - b.questionNumber;
 }
 
-// TODO: 설문 문항 및 항목 BE 요청 (회원가입 시 / 8회기가 지난 플래그가 True일 시)
-export function SurveyForm({
+function buildRegisterPayload(
+  allQuestions: ScaleQuestionDto[],
+  answersById: Record<number, number>,
+): ScaleQuestionUserAnswerRegisterRequest {
+  const items: ScaleQuestionUserAnswerItem[] = allQuestions
+    .slice()
+    .sort(sortByQuestionNumber)
+    .map((q) => ({
+      scaleQuestionId: q.scaleQuestionId,
+      answer: answersById[q.scaleQuestionId] ?? 0,
+    }));
+
+  const invalid = items.find((x) => x.answer < 1 || x.answer > 5);
+  if (invalid) {
+    throw new Error(
+      `Invalid answer (1~5) for scaleQuestionId=${invalid.scaleQuestionId}: ${invalid.answer}`,
+    );
+  }
+
+  return { items };
+}
+
+export default function SurveyForm({
   mode,
-  onComplete,
-  initialScale = ScaleType.ANXIETY,
-}: SurveyFormProps) {
-  const [currentSurvey, setCurrentSurvey] = useState<ScaleType>(initialScale);
+  onCompleteAction,
+}: {
+  mode: SurveyMode;
+  onCompleteAction?: (mode: SurveyMode) => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [anxietyAnswers, setAnxietyAnswers] = useState<number[]>(
-    Array(anxietyQuestions.length).fill(0),
-  );
-  const [depressionAnswers, setDepressionAnswers] = useState<number[]>(
-    Array(depressionQuestions.length).fill(0),
-  );
-  const [angerAnswers, setAngerAnswers] = useState<number[]>(
-    Array(angerQuestions.length).fill(0),
-  );
+  const [step, setStep] = useState<SurveyStep>("ANGER");
+  const [questions, setQuestions] = useState<ScaleQuestionDto[]>([]);
+  const [answersById, setAnswersById] = useState<Record<number, number>>({});
 
-  const getCurrentQuestions = () => {
-    switch (currentSurvey) {
-      case ScaleType.ANXIETY:
-        return anxietyQuestions;
-      case ScaleType.DEPRESSION:
-        return depressionQuestions;
-      case ScaleType.ANGER:
-        return angerQuestions;
-    }
-  };
+  useEffect(() => {
+    const run = async () => {
+      try {
+        setLoading(true);
 
-  const getCurrentAnswers = () => {
-    switch (currentSurvey) {
-      case ScaleType.ANXIETY:
-        return anxietyAnswers;
-      case ScaleType.DEPRESSION:
-        return depressionAnswers;
-      case ScaleType.ANGER:
-        return angerAnswers;
-    }
-  };
+        const res: CommonResponseScaleQuestionFindAllResponse =
+          await scaleQuestionApi.findAllScaleQuestions();
 
-  const setCurrentAnswer = (index: number, value: number) => {
-    switch (currentSurvey) {
-      case ScaleType.ANXIETY: {
-        const next = [...anxietyAnswers];
-        next[index] = value;
-        setAnxietyAnswers(next);
-        break;
+        setQuestions(res.data?.scaleQuestions ?? []);
+      } finally {
+        setLoading(false);
       }
-      case ScaleType.DEPRESSION: {
-        const next = [...depressionAnswers];
-        next[index] = value;
-        setDepressionAnswers(next);
-        break;
-      }
-      case ScaleType.ANGER: {
-        const next = [...angerAnswers];
-        next[index] = value;
-        setAngerAnswers(next);
-        break;
-      }
-    }
-  };
+    };
 
-  const isCurrentSurveyComplete = () => {
-    const answers = getCurrentAnswers();
-    return answers.every((answer) => answer > 0);
-  };
+    run();
+  }, []);
 
-  const getProgress = () => {
-    switch (currentSurvey) {
-      case ScaleType.ANXIETY:
-        return 33;
-      case ScaleType.DEPRESSION:
-        return 66;
-      case ScaleType.ANGER:
-        return 100;
-    }
-  };
+  const stepQuestions = useMemo(() => {
+    return questions
+      .filter((q) => q.scaleCategory === step)
+      .slice()
+      .sort(sortByQuestionNumber);
+  }, [questions, step]);
 
-  const handleNext = () => {
-    if (currentSurvey === ScaleType.ANXIETY) {
-      setCurrentSurvey(ScaleType.DEPRESSION);
-    } else if (currentSurvey === ScaleType.DEPRESSION) {
-      setCurrentSurvey(ScaleType.ANGER);
-    } else {
-      onComplete({ anxietyAnswers, depressionAnswers, angerAnswers });
-    }
-  };
+  const stepIndex = STEP_ORDER.indexOf(step);
+  const progress = Math.round(((stepIndex + 1) / STEP_ORDER.length) * 100);
+
+  const isStepComplete = useMemo(() => {
+    if (stepQuestions.length === 0) return false;
+    return stepQuestions.every((q) => {
+      const v = answersById[q.scaleQuestionId] ?? 0;
+      return v >= 1 && v <= 5;
+    });
+  }, [stepQuestions, answersById]);
+
+  const canGoBack = stepIndex > 0;
 
   const handleBack = () => {
-    if (currentSurvey === ScaleType.DEPRESSION) {
-      setCurrentSurvey(ScaleType.ANXIETY);
-    } else if (currentSurvey === ScaleType.ANGER) {
-      setCurrentSurvey(ScaleType.DEPRESSION);
+    if (!canGoBack) return;
+    setStep(STEP_ORDER[stepIndex - 1]);
+  };
+
+  const handleNextOrSubmit = async () => {
+    if (stepIndex < STEP_ORDER.length - 1) {
+      setStep(STEP_ORDER[stepIndex + 1]);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const payload = buildRegisterPayload(questions, answersById);
+
+      await scaleQuestionApi.registerUserScaleQuestionResult({
+        scaleQuestionUserAnswerRegisterRequest: payload,
+      });
+
+      onCompleteAction?.(mode);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const questions = getCurrentQuestions();
-  const answers = getCurrentAnswers();
-
-  const MODE_BADGE = {
-    register: { label: "회원가입 설문", sub: "초기 상태 확인" },
-    session: { label: "정기 설문 (8회기 당 1번)", sub: "정기 척도 평가" },
-  } as const;
+  if (loading) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted py-8 pb-10">
@@ -171,80 +166,96 @@ export function SurveyForm({
           </div>
         </div>
 
-        <Card className="w-full max-w-5xl">
+        <Card className="w-full">
           <CardHeader className="space-y-4">
-            <Progress value={getProgress()} className="h-2" />
+            <Progress value={progress} className="h-2" />
 
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <CardTitle className="text-2xl font-bold">
-                  {SCALE_LABELS[currentSurvey]} 설문
+                  {STEP_LABEL[step]}
                 </CardTitle>
+                <div className="text-sm text-muted-foreground">
+                  {stepIndex + 1} / {STEP_ORDER.length}
+                </div>
               </div>
-
-              <span className="text-sm text-muted-foreground">
-                {getProgress()}% 완료
-              </span>
+              <span className="text-sm text-muted-foreground">{progress}%</span>
             </div>
 
             <CardDescription className="whitespace-pre-line leading-relaxed">
-              {SURVEY_GUIDE_TEXT[currentSurvey]}
+              {STEP_GUIDE[step]}
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             <div className="space-y-8">
-              {questions.map((question, index) => (
-                <div key={index} className="space-y-3 rounded-sm border p-4">
-                  <Label className="text-base font-medium">
-                    {index + 1}. {question}
-                  </Label>
+              {stepQuestions.map((q) => {
+                const current = answersById[q.scaleQuestionId] ?? 0;
 
-                  <RadioGroup
-                    value={answers[index]?.toString() ?? "0"}
-                    onValueChange={(value) =>
-                      setCurrentAnswer(index, Number.parseInt(value, 10))
-                    }
-                    className="flex gap-4"
+                return (
+                  <div
+                    key={q.scaleQuestionId}
+                    className="space-y-3 rounded-sm border p-4"
                   >
-                    {SCALE_OPTIONS.map((label, scaleIndex) => (
-                      <div
-                        key={scaleIndex}
-                        className="flex items-center space-x-2"
-                      >
-                        <RadioGroupItem
-                          value={(scaleIndex + 1).toString()}
-                          id={`q${index}-${scaleIndex}`}
-                        />
-                        <Label
-                          htmlFor={`q${index}-${scaleIndex}`}
-                          className="cursor-pointer font-normal"
-                        >
-                          {label}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-              ))}
+                    <Label className="text-base font-medium">
+                      {q.questionNumber}. {q.content}
+                    </Label>
+
+                    <RadioGroup
+                      value={current ? String(current) : ""}
+                      onValueChange={(v) => {
+                        const n = Number.parseInt(v, 10);
+                        setAnswersById((prev) => ({
+                          ...prev,
+                          [q.scaleQuestionId]: n,
+                        }));
+                      }}
+                      className="flex flex-col gap-2"
+                    >
+                      {q.options.map((opt, idx) => {
+                        const value = String(idx + 1);
+                        const id = `q${q.scaleQuestionId}-${idx + 1}`;
+
+                        return (
+                          <div key={id} className="flex items-center gap-2">
+                            <RadioGroupItem value={value} id={id} />
+                            <Label
+                              htmlFor={id}
+                              className="cursor-pointer font-normal"
+                            >
+                              {opt}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </RadioGroup>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="mt-8 flex justify-between">
-              {currentSurvey !== ScaleType.ANXIETY && (
-                <Button variant="outline" size="lg" onClick={handleBack}>
+              {canGoBack ? (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleBack}
+                  disabled={submitting}
+                >
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   이전
                 </Button>
+              ) : (
+                <div />
               )}
 
               <Button
                 size="lg"
-                onClick={handleNext}
-                disabled={!isCurrentSurveyComplete()}
-                className={currentSurvey === ScaleType.ANXIETY ? "ml-auto" : ""}
+                onClick={handleNextOrSubmit}
+                disabled={!isStepComplete || submitting}
               >
-                {currentSurvey === ScaleType.ANGER ? "완료" : "다음"}
-                {currentSurvey !== ScaleType.ANGER && (
+                {stepIndex === STEP_ORDER.length - 1 ? "완료" : "다음"}
+                {stepIndex !== STEP_ORDER.length - 1 && (
                   <ChevronRight className="ml-2 h-4 w-4" />
                 )}
               </Button>
