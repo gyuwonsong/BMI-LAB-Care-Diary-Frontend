@@ -25,7 +25,17 @@ export default function CallbackClient() {
       const type = sp.get("type");
       const token = sp.get("token");
 
-      if (type && token && isOAuthType(type)) {
+      if (type && isOAuthType(type)) {
+        if (type === "DUPLICATE_EMAIL") {
+          router.replace("/login?reason=duplicate_email");
+          return;
+        }
+
+        if (!token) {
+          router.replace("/login?error=invalid_callback");
+          return;
+        }
+
         setOAuthSession(type, token);
 
         window.history.replaceState(
@@ -46,16 +56,10 @@ export default function CallbackClient() {
           window.location.assign(
             payload?.role === "ADMIN" ? "/admin/users" : "/home",
           );
-
           return;
         }
 
-        if (type === "NEW") {
-          router.replace("/register");
-          return;
-        }
-
-        router.replace("/login/duplicate-email");
+        router.replace("/register");
         return;
       }
 
