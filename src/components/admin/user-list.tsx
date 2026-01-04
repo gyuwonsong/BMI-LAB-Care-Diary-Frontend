@@ -1,13 +1,10 @@
 import { User, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { User as UserType } from "@/lib/types";
+import type { AdminUserDto } from "@/generated-api";
+import { formatCreated } from "@/utils/date";
 
 interface UserListProps {
-  users: (UserType & {
-    birthDate: string;
-    disease: string;
-    risk?: { isRisk: boolean; reason: string };
-  })[];
+  users: AdminUserDto[];
   selectedUserId: string | null;
   onSelectUser: (userId: string) => void;
 }
@@ -20,13 +17,13 @@ export function UserList({
   return (
     <div className="divide-y divide-border">
       {users.map((user) => {
-        const isRisk = user.risk?.isRisk === true;
-        const isSelected = selectedUserId === user.id;
+        const isRisk = user.atRisk;
+        const isSelected = selectedUserId === user.userId;
 
         return (
           <button
-            key={user.id}
-            onClick={() => onSelectUser(user.id)}
+            key={user.userId}
+            onClick={() => onSelectUser(user.userId)}
             className={cn(
               "w-full px-6 py-4 text-left transition-colors hover:bg-muted/50",
               isSelected &&
@@ -52,14 +49,16 @@ export function UserList({
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">{user.name}</p>
-
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {user.birthDate}
+                <p className="text-base font-semibold text-foreground">
+                  {user.name}
                 </p>
 
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {user.disease}
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {formatCreated(user.birthDate, "date")}
+                </p>
+
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {user.primaryDiagnosis ?? "주진단명 없음"}
                 </p>
               </div>
             </div>
