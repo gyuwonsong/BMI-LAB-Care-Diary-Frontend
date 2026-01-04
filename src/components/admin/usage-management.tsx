@@ -3,53 +3,74 @@
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-interface UsageStats {
-  totalUsers: number;
-  totalAnalyses: number;
-  costPerAnalysis: number;
+import { adminUsageApi } from "@/lib/api/client";
+
+import type {
+  CommonResponseAdminUsageResponse,
+  CommonResponseAdminUserUsageResponse,
+  UsageDetail,
+  UserUsageDto,
+} from "@/generated-api";
+
+function formatWon(n: number) {
+  return n.toLocaleString();
 }
 
-interface MonthlyUsageStats extends UsageStats {
-  month: string;
-}
-
-interface UserUsageStats {
-  userId: string;
-  userName: string;
-  diaryCount: number;
-  analysisCount: number;
+function formatCount(n: number) {
+  return n.toLocaleString();
 }
 
 export function UsageManagement() {
+  const [inputValue, setInputValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const cumulativeUsage: UsageStats = {
-    totalUsers: 156,
-    totalAnalyses: 1248,
-    costPerAnalysis: 5000,
-  };
+  const [loadingUsage, setLoadingUsage] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
-  const monthlyUsage: MonthlyUsageStats = {
-    month: "2025년 12월",
-    totalUsers: 45,
-    totalAnalyses: 342,
-    costPerAnalysis: 5000,
-  };
+  const [cumulative, setCumulative] = useState<UsageDetail | null>(null);
+  const [monthly, setMonthly] = useState<UsageDetail | null>(null);
 
-  const userUsageData: UserUsageStats[] = [
-    { userId: "U001", userName: "피카츄", diaryCount: 45, analysisCount: 12 },
-    { userId: "U002", userName: "라이츄", diaryCount: 38, analysisCount: 10 },
-    { userId: "U003", userName: "파이리", diaryCount: 52, analysisCount: 15 },
-    { userId: "U004", userName: "꼬부기", diaryCount: 29, analysisCount: 8 },
-  ];
+  const [users, setUsers] = useState<UserUsageDto[]>([]);
 
-  const filteredUsers = userUsageData.filter(
-    (user) =>
-      user.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.userId.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  useEffect(() => {
+    const run = async () => {
+      try {
+        setLoadingUsage(true);
+
+        const res: CommonResponseAdminUsageResponse =
+          await adminUsageApi.getUsage();
+        setCumulative(res.data?.cumulative ?? null);
+        setMonthly(res.data?.monthly ?? null);
+      } finally {
+        setLoadingUsage(false);
+      }
+    };
+
+    run();
+  }, []);
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        setLoadingUsers(true);
+
+        const res: CommonResponseAdminUserUsageResponse =
+          await adminUsageApi.getUserUsages(
+            searchQuery.length > 0 ? { search: searchQuery } : {},
+          );
+
+        setUsers(res.data?.users ?? []);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    run();
+  }, [searchQuery]);
+
+  const displayedUsers = useMemo(() => users, [users]);
 
   return (
     <div className="space-y-6 px-40 py-8 pb-10 bg-muted">
@@ -61,19 +82,25 @@ export function UsageManagement() {
               <div className="bg-white p-6">
                 <div className="text-sm text-muted-foreground">사용자 수</div>
                 <div className="mt-2 text-2xl font-bold">
-                  {cumulativeUsage.totalUsers} 명
+                  {loadingUsage || !cumulative
+                    ? "—"
+                    : `${formatCount(cumulative.userCount)} 명`}
                 </div>
               </div>
               <div className="bg-white p-6">
                 <div className="text-sm text-muted-foreground">분석 건 수</div>
                 <div className="mt-2 text-2xl font-bold">
-                  {cumulativeUsage.totalAnalyses} 건
+                  {loadingUsage || !cumulative
+                    ? "—"
+                    : `${formatCount(cumulative.analysisCount)} 건`}
                 </div>
               </div>
               <div className="bg-white p-6">
                 <div className="text-sm text-muted-foreground">사용료</div>
                 <div className="mt-2 text-2xl font-bold">
-                  {cumulativeUsage.costPerAnalysis.toLocaleString()} 원/건
+                  {loadingUsage || !cumulative
+                    ? "—"
+                    : `${formatWon(cumulative.usageFee)} 원`}
                 </div>
               </div>
             </div>
@@ -89,19 +116,25 @@ export function UsageManagement() {
               <div className="bg-white p-6">
                 <div className="text-sm text-muted-foreground">사용자 수</div>
                 <div className="mt-2 text-2xl font-bold">
-                  {monthlyUsage.totalUsers} 명
+                  {loadingUsage || !monthly
+                    ? "—"
+                    : `${formatCount(monthly.userCount)} 명`}
                 </div>
               </div>
               <div className="bg-white p-6">
                 <div className="text-sm text-muted-foreground">분석 건 수</div>
                 <div className="mt-2 text-2xl font-bold">
-                  {monthlyUsage.totalAnalyses} 건
+                  {loadingUsage || !monthly
+                    ? "—"
+                    : `${formatCount(monthly.analysisCount)} 건`}
                 </div>
               </div>
               <div className="bg-white p-6">
                 <div className="text-sm text-muted-foreground">사용료</div>
                 <div className="mt-2 text-2xl font-bold">
-                  {monthlyUsage.costPerAnalysis.toLocaleString()} 원/건
+                  {loadingUsage || !monthly
+                    ? "—"
+                    : `${formatWon(monthly.usageFee)} 원`}
                 </div>
               </div>
             </div>
@@ -116,9 +149,14 @@ export function UsageManagement() {
             <div className="relative mb-6">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="사용자 ID 또는 사용자명 검색"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="사용자명 검색"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setSearchQuery(inputValue.trim());
+                  }
+                }}
                 className="pl-10 rounded-sm"
               />
             </div>
@@ -127,37 +165,72 @@ export function UsageManagement() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-muted">
-                    <th className="border-b border-border p-3 text-sm font-medium text-left">
-                      사용자 ID
+                    <th className="border-b border-border p-3 text-sm font-medium text-center">
+                      번호
                     </th>
-                    <th className="border-b border-border p-3 text-sm font-medium text-left">
-                      사용자 이름
+                    <th className="border-b border-border p-3 text-sm font-medium text-center">
+                      사용자
                     </th>
-                    <th className="border-b border-border p-3 text-sm font-medium text-right">
+                    <th className="border-b border-border p-3 text-sm font-medium text-center">
                       일기 작성 건수
                     </th>
-                    <th className="border-b border-border p-3 text-sm font-medium text-right">
+                    <th className="border-b border-border p-3 text-sm font-medium text-center">
                       분석 건수
                     </th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {filteredUsers.map((user, index) => (
-                    <tr key={index} className="hover:bg-muted/50">
-                      <td className="border-b border-border p-3 text-sm font-mono text-muted-foreground">
-                        {user.userId}
-                      </td>
-                      <td className="border-b border-border p-3 text-sm">
-                        {user.userName}
-                      </td>
-                      <td className="border-b border-border p-3 text-sm text-right font-medium">
-                        {user.diaryCount} 건
-                      </td>
-                      <td className="border-b border-border p-3 text-sm text-right font-medium">
-                        {user.analysisCount} 건
+                  {loadingUsers ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="p-6 text-sm text-muted-foreground text-center"
+                      >
+                        불러오는 중…
                       </td>
                     </tr>
-                  ))}
+                  ) : displayedUsers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="p-6 text-sm text-muted-foreground text-center"
+                      >
+                        조회 결과가 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedUsers.map((u, idx) => {
+                      const number = displayedUsers.length - idx;
+
+                      return (
+                        <tr key={u.userId} className="hover:bg-muted/50">
+                          {/* 번호 */}
+                          <td className="border-b border-border p-3 text-sm text-center text-muted-foreground">
+                            {number}
+                          </td>
+
+                          {/* 이름 (userId) */}
+                          <td className="border-b border-border p-3 text-sm text-center">
+                            <div className="font-medium">
+                              {u.userName ?? "-"}
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              ({u.userId})
+                            </div>
+                          </td>
+
+                          <td className="border-b border-border p-3 text-sm font-medium text-center">
+                            {formatCount(u.diaryCount)} 건
+                          </td>
+
+                          <td className="border-b border-border p-3 text-sm font-medium text-center">
+                            {formatCount(u.analysisCount)} 건
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
