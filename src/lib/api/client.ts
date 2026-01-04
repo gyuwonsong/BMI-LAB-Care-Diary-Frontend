@@ -1,5 +1,12 @@
 import { Configuration } from "@/generated-api/runtime";
-import { UserApi, ScaleQuestionApi, HomeApi, DiaryApi } from "@/generated-api";
+import {
+  UserApi,
+  ScaleQuestionApi,
+  DiaryApi,
+  AdminUserApi,
+  AdminUsageApi,
+  AdminDiaryApi,
+} from "@/generated-api";
 import { fetchWithSonner } from "@/lib/api/fetch-with-sonner";
 import { getOAuthSession } from "@/lib/auth-storage";
 
@@ -18,5 +25,7 @@ function createConfig() {
 
 export const userApi = new UserApi(createConfig());
 export const scaleQuestionApi = new ScaleQuestionApi(createConfig());
-export const homeApi = new HomeApi(createConfig());
 export const diaryApi = new DiaryApi(createConfig());
+export const adminUserApi = new AdminUserApi(createConfig());
+export const adminDiariyApi = new AdminDiaryApi(createConfig());
+export const adminUsageApi = new AdminUsageApi(createConfig());
