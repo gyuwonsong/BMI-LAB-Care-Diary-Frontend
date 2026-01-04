@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/popover";
 import Link from "next/link";
 import { LogOut, User } from "lucide-react";
-import { UserRole } from "@/lib/constants";
 import { clearOAuthSession, getOAuthSession } from "@/lib/auth-storage";
 import { decodeJwtPayload } from "@/lib/jwt";
 
