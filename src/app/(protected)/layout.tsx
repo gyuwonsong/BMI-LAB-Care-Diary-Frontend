@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getOAuthSession, clearOAuthSession } from "@/lib/auth-storage";
 import { decodeJwtPayload } from "@/lib/jwt";
 
-type JwtPayload = { exp?: number };
+type JwtPayload = {
+  exp?: number;
+  name?: string;
+};
 
 export default function ProtectedLayout({
   children,
@@ -13,6 +16,7 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
     const { token } = getOAuthSession();
@@ -22,11 +26,27 @@ export default function ProtectedLayout({
     }
 
     const payload = decodeJwtPayload<JwtPayload>(token);
-    if (payload?.exp && payload.exp * 1000 < Date.now()) {
+    if (!payload) {
+      clearOAuthSession();
+      router.replace("/login");
+      return;
+    }
+
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
       clearOAuthSession();
       router.replace("/login?reason=expired");
+      return;
     }
+
+    if (!payload.name || payload.name.trim() === "") {
+      router.replace("/register");
+      return;
+    }
+
+    setAllowed(true);
   }, [router]);
+
+  if (!allowed) return null;
 
   return <>{children}</>;
 }
