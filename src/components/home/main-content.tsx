@@ -143,7 +143,7 @@ export function MainContent({
               className="border-border rounded-sm hover:bg-accent/50 transition-colors"
             >
               <CardContent className="flex items-center justify-between px-6">
-                <div className="py-4">
+                <div>
                   <div className="font-medium">{item.serviceName}</div>
                   {item.serviceDigest && (
                     <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
