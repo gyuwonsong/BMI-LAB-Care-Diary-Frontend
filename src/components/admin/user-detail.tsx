@@ -293,7 +293,7 @@ export function UserDetail({ userId }: UserDetailProps) {
 
       {selectedDiaries.length > 0 && selectedDate && (
         <div className="mb-6 space-y-4">
-          {(showAllDiaries ? selectedDiaries : selectedDiaries.slice(0, 1)).map(
+          {(showAllDiaries ? selectedDiaries : selectedDiaries.slice(0, 2)).map(
             (selectedDiary) => (
               <Card key={selectedDiary.diaryId} className="rounded-sm">
                 <CardHeader className="pb-4">
@@ -396,7 +396,7 @@ export function UserDetail({ userId }: UserDetailProps) {
               ) : (
                 <>
                   <ChevronDown className="h-3 w-3" />
-                  전체보기 ({selectedDiaries.length - 1}개)
+                  전체보기 ({selectedDiaries.length - 2}개)
                 </>
               )}
             </Button>
