@@ -22,8 +22,10 @@ import {
   UserScaleItemScaleCategoryEnum,
 } from "@/generated-api";
 
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { formatCreated } from "@/utils/date";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 
 function toYMD(year: number, month: number, day: number) {
   const mm = String(month).padStart(2, "0");
@@ -68,6 +70,13 @@ export function UserDetail({ userId }: UserDetailProps) {
   const [loading, setLoading] = useState(true);
 
   const [showAllDiaries, setShowAllDiaries] = useState(false);
+
+  const [serviceVisibility, setServiceVisibility] = useState<
+    Record<string, boolean>
+  >({});
+  const [servicePending, setServicePending] = useState<Record<string, boolean>>(
+    {},
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -148,6 +157,39 @@ export function UserDetail({ userId }: UserDetailProps) {
     };
   }, [detail?.emotionCounts]);
 
+  const setWelfareServiceVisible = async (params: {
+    diaryId: string;
+    welfareServiceId: number;
+    nextVisible: boolean;
+  }) => {
+    const key = `${params.diaryId}:${params.welfareServiceId}`;
+
+    if (servicePending[key]) return;
+
+    const prevVisible = serviceVisibility[key] ?? true;
+
+    setServiceVisibility((p) => ({ ...p, [key]: params.nextVisible }));
+    setServicePending((p) => ({ ...p, [key]: true }));
+
+    try {
+      if (params.nextVisible) {
+        await adminDiariyApi.updateWelfareServiceVisible({
+          diaryId: params.diaryId,
+          welfareServiceId: params.welfareServiceId,
+        });
+      } else {
+        await adminDiariyApi.updateWelfareServiceInvisible({
+          diaryId: params.diaryId,
+          welfareServiceId: params.welfareServiceId,
+        });
+      }
+    } catch (e) {
+      setServiceVisibility((p) => ({ ...p, [key]: prevVisible }));
+    } finally {
+      setServicePending((p) => ({ ...p, [key]: false }));
+    }
+  };
+
   const handleDateSelect = async (date: number | null) => {
     if (selectedDate === date) {
       setSelectedDate(null);
@@ -170,6 +212,18 @@ export function UserDetail({ userId }: UserDetailProps) {
 
     const diaries = (res?.data?.diaries ?? []) as AdminDiaryDto[];
     setSelectedDiaries(diaries);
+
+    setServiceVisibility((prev) => {
+      const next = { ...prev };
+      for (const d of diaries) {
+        for (const s of d.welfareServices ?? []) {
+          if (s.welfareServiceId == null) continue;
+          const key = `${d.diaryId}:${s.welfareServiceId}`;
+          if (next[key] === undefined) next[key] = !!s.visible;
+        }
+      }
+      return next;
+    });
   };
 
   const handleOpenSdohResults = (diaryId: string) => {
@@ -375,6 +429,123 @@ export function UserDetail({ userId }: UserDetailProps) {
                       })}
                     </div>
                   </div>
+
+                  <div className="border-b my-6" />
+
+                  <div>
+                    <h3 className="mb-3 text-sm font-medium">키워드</h3>
+
+                    {(selectedDiary.extractedKeywords ?? []).length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {(selectedDiary.extractedKeywords ?? []).map((k) => (
+                          <Badge
+                            key={`${selectedDiary.diaryId}-kw-${k.keywordExtractionId ?? k.keyword}`}
+                            variant="secondary"
+                            className="rounded-sm"
+                            title={(k.evidences ?? []).join("\n")}
+                          >
+                            {k.keyword}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        추출된 키워드가 없습니다.
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="mb-3 text-sm font-medium">추천 서비스</h3>
+
+                    {(selectedDiary.welfareServices ?? []).length > 0 ? (
+                      <div className="space-y-2">
+                        {(selectedDiary.welfareServices ?? []).map(
+                          (item, idx) => {
+                            const welfareServiceId = item.welfareServiceId;
+
+                            const stateKey =
+                              welfareServiceId != null
+                                ? `${selectedDiary.diaryId}:${welfareServiceId}`
+                                : `${selectedDiary.diaryId}:idx-${idx}`;
+
+                            const visible =
+                              welfareServiceId != null
+                                ? (serviceVisibility[stateKey] ??
+                                  !!item.visible)
+                                : !!item.visible;
+
+                            const pending =
+                              welfareServiceId != null
+                                ? !!servicePending[stateKey]
+                                : false;
+
+                            return (
+                              <Card
+                                key={stateKey}
+                                className="border-border rounded-sm hover:bg-accent/50 transition-colors"
+                              >
+                                <CardContent className="flex items-center justify-between px-6">
+                                  <div className="min-w-0 mr-2">
+                                    <div className="text-sm font-medium flex flex-row gap-1 items-center">
+                                      {item.serviceName}
+
+                                      {item.serviceDetailLink && (
+                                        <Button
+                                          variant="ghost"
+                                          className="size-3 hover:bg-white mb-1"
+                                          asChild
+                                        >
+                                          <a
+                                            href={item.serviceDetailLink}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            aria-label={`${item.serviceName} 링크 열기`}
+                                          >
+                                            <ExternalLink className="h-2 w-2 text-primary" />
+                                          </a>
+                                        </Button>
+                                      )}
+                                    </div>
+
+                                    {!!item.serviceDigest && (
+                                      <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                                        {item.adminLevel1Name}
+                                        {item.adminLevel2Name
+                                          ? `·${item.adminLevel2Name}`
+                                          : ""}{" "}
+                                        | {item.serviceDigest}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <Switch
+                                    checked={visible}
+                                    disabled={
+                                      pending || welfareServiceId == null
+                                    }
+                                    onCheckedChange={(next) => {
+                                      if (welfareServiceId == null) return;
+
+                                      setWelfareServiceVisible({
+                                        diaryId: selectedDiary.diaryId,
+                                        welfareServiceId,
+                                        nextVisible: next,
+                                      });
+                                    }}
+                                  />
+                                </CardContent>
+                              </Card>
+                            );
+                          },
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        추천 서비스가 없습니다.
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ),
@@ -404,7 +575,7 @@ export function UserDetail({ userId }: UserDetailProps) {
         </div>
       )}
 
-      <Card className="rounded-sm">
+      <Card className="rounded-sm mb-6">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle>
