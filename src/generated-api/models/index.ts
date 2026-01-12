@@ -2,9 +2,7 @@
 /* eslint-disable */
 export * from './AdminDiaryDto';
 export * from './AdminDiaryFindAllResponse';
-export * from './AdminDiaryKeywordResponse';
 export * from './AdminDiarySdohResponse';
-export * from './AdminDiaryWelfareServiceResponse';
 export * from './AdminUsageResponse';
 export * from './AdminUserDetailResponse';
 export * from './AdminUserDto';
@@ -13,9 +11,7 @@ export * from './AdminUserScaleFindAllResponse';
 export * from './AdminUserScaleQuestionResultResponse';
 export * from './AdminUserUsageResponse';
 export * from './CommonResponseAdminDiaryFindAllResponse';
-export * from './CommonResponseAdminDiaryKeywordResponse';
 export * from './CommonResponseAdminDiarySdohResponse';
-export * from './CommonResponseAdminDiaryWelfareServiceResponse';
 export * from './CommonResponseAdminUsageResponse';
 export * from './CommonResponseAdminUserDetailResponse';
 export * from './CommonResponseAdminUserFindAllResponse';

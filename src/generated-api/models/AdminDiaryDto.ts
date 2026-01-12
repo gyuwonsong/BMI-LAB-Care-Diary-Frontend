@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { DiaryKeywordDto } from './DiaryKeywordDto';
+import {
+    DiaryKeywordDtoFromJSON,
+    DiaryKeywordDtoFromJSONTyped,
+    DiaryKeywordDtoToJSON,
+    DiaryKeywordDtoToJSONTyped,
+} from './DiaryKeywordDto';
 import type { RecommendedQuestionUserScoreDto } from './RecommendedQuestionUserScoreDto';
 import {
     RecommendedQuestionUserScoreDtoFromJSON,
@@ -20,6 +27,13 @@ import {
     RecommendedQuestionUserScoreDtoToJSON,
     RecommendedQuestionUserScoreDtoToJSONTyped,
 } from './RecommendedQuestionUserScoreDto';
+import type { DiaryWelfareServiceDto } from './DiaryWelfareServiceDto';
+import {
+    DiaryWelfareServiceDtoFromJSON,
+    DiaryWelfareServiceDtoFromJSONTyped,
+    DiaryWelfareServiceDtoToJSON,
+    DiaryWelfareServiceDtoToJSONTyped,
+} from './DiaryWelfareServiceDto';
 
 /**
  * 일기 정보
@@ -69,6 +83,18 @@ export interface AdminDiaryDto {
      * @memberof AdminDiaryDto
      */
     questionScores: Array<RecommendedQuestionUserScoreDto>;
+    /**
+     * 추출된 키워드 목록
+     * @type {Array<DiaryKeywordDto>}
+     * @memberof AdminDiaryDto
+     */
+    extractedKeywords: Array<DiaryKeywordDto>;
+    /**
+     * 매칭된 복지 서비스 목록
+     * @type {Array<DiaryWelfareServiceDto>}
+     * @memberof AdminDiaryDto
+     */
+    welfareServices: Array<DiaryWelfareServiceDto>;
 }
 
 
@@ -94,6 +120,8 @@ export function instanceOfAdminDiaryDto(value: object): value is AdminDiaryDto {
     if (!('emotion' in value) || value['emotion'] === undefined) return false;
     if (!('createdAt' in value) || value['createdAt'] === undefined) return false;
     if (!('questionScores' in value) || value['questionScores'] === undefined) return false;
+    if (!('extractedKeywords' in value) || value['extractedKeywords'] === undefined) return false;
+    if (!('welfareServices' in value) || value['welfareServices'] === undefined) return false;
     return true;
 }
 
@@ -114,6 +142,8 @@ export function AdminDiaryDtoFromJSONTyped(json: any, ignoreDiscriminator: boole
         'emotion': json['emotion'],
         'createdAt': (new Date(json['createdAt'])),
         'questionScores': ((json['questionScores'] as Array<any>).map(RecommendedQuestionUserScoreDtoFromJSON)),
+        'extractedKeywords': ((json['extractedKeywords'] as Array<any>).map(DiaryKeywordDtoFromJSON)),
+        'welfareServices': ((json['welfareServices'] as Array<any>).map(DiaryWelfareServiceDtoFromJSON)),
     };
 }
 
@@ -135,6 +165,8 @@ export function AdminDiaryDtoToJSONTyped(value?: AdminDiaryDto | null, ignoreDis
         'emotion': value['emotion'],
         'createdAt': value['createdAt'].toISOString(),
         'questionScores': ((value['questionScores'] as Array<any>).map(RecommendedQuestionUserScoreDtoToJSON)),
+        'extractedKeywords': ((value['extractedKeywords'] as Array<any>).map(DiaryKeywordDtoToJSON)),
+        'welfareServices': ((value['welfareServices'] as Array<any>).map(DiaryWelfareServiceDtoToJSON)),
     };
 }
 

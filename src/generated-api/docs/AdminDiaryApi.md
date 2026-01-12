@@ -5,9 +5,7 @@ All URIs are relative to *https://diary-api.snuh-bmilab.ai.kr*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**findAllByUserIdAndDate**](AdminDiaryApi.md#findallbyuseridanddate) | **GET** /v1/admin/diaries | 사용자별 일기 목록 조회 |
-| [**findExtractedKeywords**](AdminDiaryApi.md#findextractedkeywords) | **GET** /v1/admin/diaries/{diaryId}/keywords | 일기 추출 키워드 조회 |
 | [**findSdoh**](AdminDiaryApi.md#findsdoh) | **GET** /v1/admin/diaries/{diaryId}/sdoh | 일기 SDoH 조회 |
-| [**findWelfareServices**](AdminDiaryApi.md#findwelfareservices) | **GET** /v1/admin/diaries/{diaryId}/welfare-services | 일기 복지로 서비스 조회 |
 | [**updateWelfareServiceInvisible**](AdminDiaryApi.md#updatewelfareserviceinvisible) | **DELETE** /v1/admin/diaries/{diaryId}/welfare-services/{welfareServiceId}/visible | 복지 서비스 표시 비활성화 |
 | [**updateWelfareServiceVisible**](AdminDiaryApi.md#updatewelfareservicevisible) | **POST** /v1/admin/diaries/{diaryId}/welfare-services/{welfareServiceId}/visible | 복지 서비스 표시 활성화 |
 
@@ -89,80 +87,6 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## findExtractedKeywords
-
-> CommonResponseAdminDiaryKeywordResponse findExtractedKeywords(diaryId)
-
-일기 추출 키워드 조회
-
-특정 일기에서 추출된 키워드 정보를 조회합니다.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  AdminDiaryApi,
-} from '';
-import type { FindExtractedKeywordsRequest } from '';
-
-async function example() {
-  console.log("🚀 Testing  SDK...");
-  const config = new Configuration({ 
-    // Configure HTTP bearer authorization: JWT
-    accessToken: "YOUR BEARER TOKEN",
-  });
-  const api = new AdminDiaryApi(config);
-
-  const body = {
-    // string | 일기 ID
-    diaryId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies FindExtractedKeywordsRequest;
-
-  try {
-    const data = await api.findExtractedKeywords(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **diaryId** | `string` | 일기 ID | [Defaults to `undefined`] |
-
-### Return type
-
-[**CommonResponseAdminDiaryKeywordResponse**](CommonResponseAdminDiaryKeywordResponse.md)
-
-### Authorization
-
-[JWT](../README.md#JWT)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `*/*`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | 키워드 조회 성공 |  -  |
-| **401** | 인증 실패 |  -  |
-| **403** | 권한 없음 |  -  |
-| **404** | 일기를 찾을 수 없음 |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
 ## findSdoh
 
 > CommonResponseAdminDiarySdohResponse findSdoh(diaryId)
@@ -230,80 +154,6 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | SDoH 조회 성공 |  -  |
-| **401** | 인증 실패 |  -  |
-| **403** | 권한 없음 |  -  |
-| **404** | 일기를 찾을 수 없음 |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## findWelfareServices
-
-> CommonResponseAdminDiaryWelfareServiceResponse findWelfareServices(diaryId)
-
-일기 복지로 서비스 조회
-
-특정 일기와 연관된 복지로 서비스 정보를 조회합니다.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  AdminDiaryApi,
-} from '';
-import type { FindWelfareServicesRequest } from '';
-
-async function example() {
-  console.log("🚀 Testing  SDK...");
-  const config = new Configuration({ 
-    // Configure HTTP bearer authorization: JWT
-    accessToken: "YOUR BEARER TOKEN",
-  });
-  const api = new AdminDiaryApi(config);
-
-  const body = {
-    // string | 일기 ID
-    diaryId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies FindWelfareServicesRequest;
-
-  try {
-    const data = await api.findWelfareServices(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **diaryId** | `string` | 일기 ID | [Defaults to `undefined`] |
-
-### Return type
-
-[**CommonResponseAdminDiaryWelfareServiceResponse**](CommonResponseAdminDiaryWelfareServiceResponse.md)
-
-### Authorization
-
-[JWT](../README.md#JWT)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `*/*`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | 복지 서비스 조회 성공 |  -  |
 | **401** | 인증 실패 |  -  |
 | **403** | 권한 없음 |  -  |
 | **404** | 일기를 찾을 수 없음 |  -  |

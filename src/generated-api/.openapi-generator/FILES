@@ -9,9 +9,7 @@ apis/index.ts
 docs/AdminDiaryApi.md
 docs/AdminDiaryDto.md
 docs/AdminDiaryFindAllResponse.md
-docs/AdminDiaryKeywordResponse.md
 docs/AdminDiarySdohResponse.md
-docs/AdminDiaryWelfareServiceResponse.md
 docs/AdminUsageApi.md
 docs/AdminUsageResponse.md
 docs/AdminUserApi.md
@@ -22,9 +20,7 @@ docs/AdminUserScaleFindAllResponse.md
 docs/AdminUserScaleQuestionResultResponse.md
 docs/AdminUserUsageResponse.md
 docs/CommonResponseAdminDiaryFindAllResponse.md
-docs/CommonResponseAdminDiaryKeywordResponse.md
 docs/CommonResponseAdminDiarySdohResponse.md
-docs/CommonResponseAdminDiaryWelfareServiceResponse.md
 docs/CommonResponseAdminUsageResponse.md
 docs/CommonResponseAdminUserDetailResponse.md
 docs/CommonResponseAdminUserFindAllResponse.md
@@ -74,9 +70,7 @@ docs/WelfareServiceItem.md
 index.ts
 models/AdminDiaryDto.ts
 models/AdminDiaryFindAllResponse.ts
-models/AdminDiaryKeywordResponse.ts
 models/AdminDiarySdohResponse.ts
-models/AdminDiaryWelfareServiceResponse.ts
 models/AdminUsageResponse.ts
 models/AdminUserDetailResponse.ts
 models/AdminUserDto.ts
@@ -85,9 +79,7 @@ models/AdminUserScaleFindAllResponse.ts
 models/AdminUserScaleQuestionResultResponse.ts
 models/AdminUserUsageResponse.ts
 models/CommonResponseAdminDiaryFindAllResponse.ts
-models/CommonResponseAdminDiaryKeywordResponse.ts
 models/CommonResponseAdminDiarySdohResponse.ts
-models/CommonResponseAdminDiaryWelfareServiceResponse.ts
 models/CommonResponseAdminUsageResponse.ts
 models/CommonResponseAdminUserDetailResponse.ts
 models/CommonResponseAdminUserFindAllResponse.ts

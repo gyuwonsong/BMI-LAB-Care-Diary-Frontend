@@ -16,20 +16,14 @@
 import * as runtime from '../runtime';
 import type {
   CommonResponseAdminDiaryFindAllResponse,
-  CommonResponseAdminDiaryKeywordResponse,
   CommonResponseAdminDiarySdohResponse,
-  CommonResponseAdminDiaryWelfareServiceResponse,
   CommonResponseUnit,
 } from '../models/index';
 import {
     CommonResponseAdminDiaryFindAllResponseFromJSON,
     CommonResponseAdminDiaryFindAllResponseToJSON,
-    CommonResponseAdminDiaryKeywordResponseFromJSON,
-    CommonResponseAdminDiaryKeywordResponseToJSON,
     CommonResponseAdminDiarySdohResponseFromJSON,
     CommonResponseAdminDiarySdohResponseToJSON,
-    CommonResponseAdminDiaryWelfareServiceResponseFromJSON,
-    CommonResponseAdminDiaryWelfareServiceResponseToJSON,
     CommonResponseUnitFromJSON,
     CommonResponseUnitToJSON,
 } from '../models/index';
@@ -39,15 +33,7 @@ export interface FindAllByUserIdAndDateRequest {
     date: Date;
 }
 
-export interface FindExtractedKeywordsRequest {
-    diaryId: string;
-}
-
 export interface FindSdohRequest {
-    diaryId: string;
-}
-
-export interface FindWelfareServicesRequest {
     diaryId: string;
 }
 
@@ -128,53 +114,6 @@ export class AdminDiaryApi extends runtime.BaseAPI {
     }
 
     /**
-     * 특정 일기에서 추출된 키워드 정보를 조회합니다.
-     * 일기 추출 키워드 조회
-     */
-    async findExtractedKeywordsRaw(requestParameters: FindExtractedKeywordsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommonResponseAdminDiaryKeywordResponse>> {
-        if (requestParameters['diaryId'] == null) {
-            throw new runtime.RequiredError(
-                'diaryId',
-                'Required parameter "diaryId" was null or undefined when calling findExtractedKeywords().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("JWT", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/v1/admin/diaries/{diaryId}/keywords`;
-        urlPath = urlPath.replace(`{${"diaryId"}}`, encodeURIComponent(String(requestParameters['diaryId'])));
-
-        const response = await this.request({
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => CommonResponseAdminDiaryKeywordResponseFromJSON(jsonValue));
-    }
-
-    /**
-     * 특정 일기에서 추출된 키워드 정보를 조회합니다.
-     * 일기 추출 키워드 조회
-     */
-    async findExtractedKeywords(requestParameters: FindExtractedKeywordsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommonResponseAdminDiaryKeywordResponse> {
-        const response = await this.findExtractedKeywordsRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
      * 특정 일기의 사회적 건강 결정요인(Social Determinants of Health) 정보를 조회합니다.
      * 일기 SDoH 조회
      */
@@ -218,53 +157,6 @@ export class AdminDiaryApi extends runtime.BaseAPI {
      */
     async findSdoh(requestParameters: FindSdohRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommonResponseAdminDiarySdohResponse> {
         const response = await this.findSdohRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * 특정 일기와 연관된 복지로 서비스 정보를 조회합니다.
-     * 일기 복지로 서비스 조회
-     */
-    async findWelfareServicesRaw(requestParameters: FindWelfareServicesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommonResponseAdminDiaryWelfareServiceResponse>> {
-        if (requestParameters['diaryId'] == null) {
-            throw new runtime.RequiredError(
-                'diaryId',
-                'Required parameter "diaryId" was null or undefined when calling findWelfareServices().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("JWT", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/v1/admin/diaries/{diaryId}/welfare-services`;
-        urlPath = urlPath.replace(`{${"diaryId"}}`, encodeURIComponent(String(requestParameters['diaryId'])));
-
-        const response = await this.request({
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => CommonResponseAdminDiaryWelfareServiceResponseFromJSON(jsonValue));
-    }
-
-    /**
-     * 특정 일기와 연관된 복지로 서비스 정보를 조회합니다.
-     * 일기 복지로 서비스 조회
-     */
-    async findWelfareServices(requestParameters: FindWelfareServicesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommonResponseAdminDiaryWelfareServiceResponse> {
-        const response = await this.findWelfareServicesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

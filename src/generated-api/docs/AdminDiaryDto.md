@@ -14,6 +14,8 @@ Name | Type
 `emotion` | string
 `createdAt` | Date
 `questionScores` | [Array&lt;RecommendedQuestionUserScoreDto&gt;](RecommendedQuestionUserScoreDto.md)
+`extractedKeywords` | [Array&lt;DiaryKeywordDto&gt;](DiaryKeywordDto.md)
+`welfareServices` | [Array&lt;DiaryWelfareServiceDto&gt;](DiaryWelfareServiceDto.md)
 
 ## Example
 
@@ -29,6 +31,8 @@ const example = {
   "emotion": HAPPY,
   "createdAt": null,
   "questionScores": null,
+  "extractedKeywords": null,
+  "welfareServices": null,
 } satisfies AdminDiaryDto
 
 console.log(example)
