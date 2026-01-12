@@ -11,7 +11,7 @@ Name | Type
 `name` | string
 `birthDate` | Date
 `primaryDiagnosis` | string
-`atRisk` | boolean
+`isAtRisk` | boolean
 
 ## Example
 
@@ -24,7 +24,7 @@ const example = {
   "name": 홍길동,
   "birthDate": 1990-01-15,
   "primaryDiagnosis": 조현병,
-  "atRisk": false,
+  "isAtRisk": false,
 } satisfies AdminUserDto
 
 console.log(example)

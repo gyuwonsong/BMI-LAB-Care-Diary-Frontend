@@ -8,6 +8,8 @@ All URIs are relative to *https://diary-api.snuh-bmilab.ai.kr*
 | [**findExtractedKeywords**](AdminDiaryApi.md#findextractedkeywords) | **GET** /v1/admin/diaries/{diaryId}/keywords | 일기 추출 키워드 조회 |
 | [**findSdoh**](AdminDiaryApi.md#findsdoh) | **GET** /v1/admin/diaries/{diaryId}/sdoh | 일기 SDoH 조회 |
 | [**findWelfareServices**](AdminDiaryApi.md#findwelfareservices) | **GET** /v1/admin/diaries/{diaryId}/welfare-services | 일기 복지로 서비스 조회 |
+| [**updateWelfareServiceInvisible**](AdminDiaryApi.md#updatewelfareserviceinvisible) | **DELETE** /v1/admin/diaries/{diaryId}/welfare-services/{welfareServiceId}/visible | 복지 서비스 표시 비활성화 |
+| [**updateWelfareServiceVisible**](AdminDiaryApi.md#updatewelfareservicevisible) | **POST** /v1/admin/diaries/{diaryId}/welfare-services/{welfareServiceId}/visible | 복지 서비스 표시 활성화 |
 
 
 
@@ -305,6 +307,160 @@ example().catch(console.error);
 | **401** | 인증 실패 |  -  |
 | **403** | 권한 없음 |  -  |
 | **404** | 일기를 찾을 수 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## updateWelfareServiceInvisible
+
+> CommonResponseUnit updateWelfareServiceInvisible(diaryId, welfareServiceId)
+
+복지 서비스 표시 비활성화
+
+특정 일기의 복지 서비스 추천을 사용자에게 숨깁니다.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AdminDiaryApi,
+} from '';
+import type { UpdateWelfareServiceInvisibleRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: JWT
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new AdminDiaryApi(config);
+
+  const body = {
+    // string | 일기 ID
+    diaryId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number | 복지 서비스 ID
+    welfareServiceId: 789,
+  } satisfies UpdateWelfareServiceInvisibleRequest;
+
+  try {
+    const data = await api.updateWelfareServiceInvisible(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **diaryId** | `string` | 일기 ID | [Defaults to `undefined`] |
+| **welfareServiceId** | `number` | 복지 서비스 ID | [Defaults to `undefined`] |
+
+### Return type
+
+[**CommonResponseUnit**](CommonResponseUnit.md)
+
+### Authorization
+
+[JWT](../README.md#JWT)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `*/*`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | 복지 서비스 표시 비활성화 성공 |  -  |
+| **401** | 인증 실패 |  -  |
+| **403** | 권한 없음 |  -  |
+| **404** | 일기 또는 복지 서비스를 찾을 수 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## updateWelfareServiceVisible
+
+> CommonResponseUnit updateWelfareServiceVisible(diaryId, welfareServiceId)
+
+복지 서비스 표시 활성화
+
+특정 일기의 복지 서비스 추천을 사용자에게 표시합니다.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AdminDiaryApi,
+} from '';
+import type { UpdateWelfareServiceVisibleRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const config = new Configuration({ 
+    // Configure HTTP bearer authorization: JWT
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new AdminDiaryApi(config);
+
+  const body = {
+    // string | 일기 ID
+    diaryId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number | 복지 서비스 ID
+    welfareServiceId: 789,
+  } satisfies UpdateWelfareServiceVisibleRequest;
+
+  try {
+    const data = await api.updateWelfareServiceVisible(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **diaryId** | `string` | 일기 ID | [Defaults to `undefined`] |
+| **welfareServiceId** | `number` | 복지 서비스 ID | [Defaults to `undefined`] |
+
+### Return type
+
+[**CommonResponseUnit**](CommonResponseUnit.md)
+
+### Authorization
+
+[JWT](../README.md#JWT)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `*/*`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | 복지 서비스 표시 활성화 성공 |  -  |
+| **401** | 인증 실패 |  -  |
+| **403** | 권한 없음 |  -  |
+| **404** | 일기 또는 복지 서비스를 찾을 수 없음 |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

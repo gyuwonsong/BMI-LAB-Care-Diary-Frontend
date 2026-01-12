@@ -19,6 +19,7 @@ import type {
   CommonResponseAdminDiaryKeywordResponse,
   CommonResponseAdminDiarySdohResponse,
   CommonResponseAdminDiaryWelfareServiceResponse,
+  CommonResponseUnit,
 } from '../models/index';
 import {
     CommonResponseAdminDiaryFindAllResponseFromJSON,
@@ -29,6 +30,8 @@ import {
     CommonResponseAdminDiarySdohResponseToJSON,
     CommonResponseAdminDiaryWelfareServiceResponseFromJSON,
     CommonResponseAdminDiaryWelfareServiceResponseToJSON,
+    CommonResponseUnitFromJSON,
+    CommonResponseUnitToJSON,
 } from '../models/index';
 
 export interface FindAllByUserIdAndDateRequest {
@@ -46,6 +49,16 @@ export interface FindSdohRequest {
 
 export interface FindWelfareServicesRequest {
     diaryId: string;
+}
+
+export interface UpdateWelfareServiceInvisibleRequest {
+    diaryId: string;
+    welfareServiceId: number;
+}
+
+export interface UpdateWelfareServiceVisibleRequest {
+    diaryId: string;
+    welfareServiceId: number;
 }
 
 /**
@@ -252,6 +265,116 @@ export class AdminDiaryApi extends runtime.BaseAPI {
      */
     async findWelfareServices(requestParameters: FindWelfareServicesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommonResponseAdminDiaryWelfareServiceResponse> {
         const response = await this.findWelfareServicesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * 특정 일기의 복지 서비스 추천을 사용자에게 숨깁니다.
+     * 복지 서비스 표시 비활성화
+     */
+    async updateWelfareServiceInvisibleRaw(requestParameters: UpdateWelfareServiceInvisibleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommonResponseUnit>> {
+        if (requestParameters['diaryId'] == null) {
+            throw new runtime.RequiredError(
+                'diaryId',
+                'Required parameter "diaryId" was null or undefined when calling updateWelfareServiceInvisible().'
+            );
+        }
+
+        if (requestParameters['welfareServiceId'] == null) {
+            throw new runtime.RequiredError(
+                'welfareServiceId',
+                'Required parameter "welfareServiceId" was null or undefined when calling updateWelfareServiceInvisible().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("JWT", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/admin/diaries/{diaryId}/welfare-services/{welfareServiceId}/visible`;
+        urlPath = urlPath.replace(`{${"diaryId"}}`, encodeURIComponent(String(requestParameters['diaryId'])));
+        urlPath = urlPath.replace(`{${"welfareServiceId"}}`, encodeURIComponent(String(requestParameters['welfareServiceId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CommonResponseUnitFromJSON(jsonValue));
+    }
+
+    /**
+     * 특정 일기의 복지 서비스 추천을 사용자에게 숨깁니다.
+     * 복지 서비스 표시 비활성화
+     */
+    async updateWelfareServiceInvisible(requestParameters: UpdateWelfareServiceInvisibleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommonResponseUnit> {
+        const response = await this.updateWelfareServiceInvisibleRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * 특정 일기의 복지 서비스 추천을 사용자에게 표시합니다.
+     * 복지 서비스 표시 활성화
+     */
+    async updateWelfareServiceVisibleRaw(requestParameters: UpdateWelfareServiceVisibleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommonResponseUnit>> {
+        if (requestParameters['diaryId'] == null) {
+            throw new runtime.RequiredError(
+                'diaryId',
+                'Required parameter "diaryId" was null or undefined when calling updateWelfareServiceVisible().'
+            );
+        }
+
+        if (requestParameters['welfareServiceId'] == null) {
+            throw new runtime.RequiredError(
+                'welfareServiceId',
+                'Required parameter "welfareServiceId" was null or undefined when calling updateWelfareServiceVisible().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("JWT", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/admin/diaries/{diaryId}/welfare-services/{welfareServiceId}/visible`;
+        urlPath = urlPath.replace(`{${"diaryId"}}`, encodeURIComponent(String(requestParameters['diaryId'])));
+        urlPath = urlPath.replace(`{${"welfareServiceId"}}`, encodeURIComponent(String(requestParameters['welfareServiceId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CommonResponseUnitFromJSON(jsonValue));
+    }
+
+    /**
+     * 특정 일기의 복지 서비스 추천을 사용자에게 표시합니다.
+     * 복지 서비스 표시 활성화
+     */
+    async updateWelfareServiceVisible(requestParameters: UpdateWelfareServiceVisibleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommonResponseUnit> {
+        const response = await this.updateWelfareServiceVisibleRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
