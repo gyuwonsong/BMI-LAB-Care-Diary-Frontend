@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,12 @@ import type {
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+const dash = (v?: string | number | null) => {
+  if (v === null || v === undefined) return "-";
+  const s = String(v).trim();
+  return s.length ? s : "-";
+};
+
 function getMajorTitle(item: DiarySdohItemDto): string {
   return item.majorCat?.trim() || "기타";
 }
@@ -30,17 +35,18 @@ function getMajorTitle(item: DiarySdohItemDto): string {
 function toTableItem(item: DiarySdohItemDto) {
   return {
     key: `${item.elementNo}-${item.signCode ?? "NA"}`,
-    label:
-      item.typeLabel ??
-      item.subCat ??
-      item.middleCat ??
-      item.majorCat ??
-      `항목 ${item.elementNo}`,
-    signCode: item.signCode ?? "-",
-    severity: item.severity ?? "-",
-    duration: item.duration ?? "-",
-    coping: item.coping ?? "-",
-    recommendation: item.recommendation ?? "-",
+    elementNo: item.elementNo,
+
+    middleCat: dash(item.middleCat),
+    subCat: dash(item.subCat),
+
+    type: dash(item.typeLabel),
+
+    signCode: dash(item.signCode),
+    severity: dash(item.severity),
+    duration: dash(item.duration),
+    coping: dash(item.coping),
+    recommendation: dash(item.recommendation),
     evidences: item.evidences ?? [],
   };
 }
@@ -60,22 +66,28 @@ function SdohTable({
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-muted">
-              <th className="border-b border-r border-border p-2 text-sm font-medium text-left w-[36%]">
-                항목
+              <th className="border-b border-r border-border p-2 text-sm font-medium text-left w-[12%]">
+                중분류
               </th>
-              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[8%]">
+              <th className="border-b border-r border-border p-2 text-sm font-medium text-left w-[12%]">
+                소분류
+              </th>
+              <th className="border-b border-r border-border p-2 text-sm font-medium text-left w-[28%]">
+                유형
+              </th>
+              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[6%]">
                 부호
               </th>
-              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[8%]">
+              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[6%]">
                 심각성
               </th>
-              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[8%]">
+              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[6%]">
                 지속기간
               </th>
-              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[8%]">
+              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[6%]">
                 대처능력
               </th>
-              <th className="border-b border-border p-2 text-sm font-medium text-center">
+              <th className="border-b border-r border-border p-2 text-sm font-medium text-center w-[12%]">
                 권고되는 개입 / 근거
               </th>
             </tr>
@@ -84,14 +96,31 @@ function SdohTable({
           <tbody>
             {items.map((it, idx) => (
               <tr key={it.key} className="text-sm">
-                {/* ✅ 각 칼럼 구분 보더: border-r 추가 + row 구분 border-b */}
                 <td
                   className={cn(
                     "p-3 border-r border-border align-top",
                     idx !== items.length - 1 && "border-b border-border",
                   )}
                 >
-                  {it.label}
+                  {it.middleCat}
+                </td>
+
+                <td
+                  className={cn(
+                    "p-3 border-r border-border align-top",
+                    idx !== items.length - 1 && "border-b border-border",
+                  )}
+                >
+                  {it.subCat}
+                </td>
+
+                <td
+                  className={cn(
+                    "p-3 border-r border-border align-top",
+                    idx !== items.length - 1 && "border-b border-border",
+                  )}
+                >
+                  {it.type}
                 </td>
 
                 <td
@@ -136,7 +165,6 @@ function SdohTable({
                     idx !== items.length - 1 && "border-b border-border",
                   )}
                 >
-                  {/* ✅ 셀에는 버튼만 (요약/개입/근거는 모달 안으로) */}
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
@@ -152,12 +180,11 @@ function SdohTable({
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
                         <DialogTitle className="text-base">
-                          {it.label}
+                          {it.type}
                         </DialogTitle>
                       </DialogHeader>
 
                       <div className="space-y-5">
-                        {/* 요약(메타) */}
                         <div className="rounded-sm border border-border bg-muted/30 p-3">
                           <div className="text-xs font-medium text-muted-foreground mb-2">
                             요약
@@ -190,7 +217,6 @@ function SdohTable({
                           </div>
                         </div>
 
-                        {/* 권고되는 개입 */}
                         <div className="space-y-2">
                           <h4 className="text-sm font-semibold">
                             권고되는 개입
@@ -200,7 +226,6 @@ function SdohTable({
                           </p>
                         </div>
 
-                        {/* 근거 */}
                         <div className="space-y-2">
                           <h4 className="text-sm font-semibold">근거</h4>
 
@@ -226,7 +251,7 @@ function SdohTable({
             {items.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="p-6 text-center text-sm text-muted-foreground"
                 >
                   데이터가 없습니다.
@@ -241,10 +266,7 @@ function SdohTable({
 }
 
 export default function SdohResultsContent({ diaryId }: { diaryId: string }) {
-  const router = useRouter();
-
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<DiarySdohItemDto[]>([]);
 
   useEffect(() => {
@@ -252,7 +274,6 @@ export default function SdohResultsContent({ diaryId }: { diaryId: string }) {
 
     async function run() {
       setLoading(true);
-      setError(null);
 
       try {
         const res: CommonResponseAdminDiarySdohResponse =
@@ -262,7 +283,6 @@ export default function SdohResultsContent({ diaryId }: { diaryId: string }) {
         if (mounted) setItems(list);
       } catch (e) {
         console.error("Failed to fetch SDoH data:", e);
-        if (mounted) setError("SDoH 데이터를 불러오지 못했습니다.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -291,21 +311,9 @@ export default function SdohResultsContent({ diaryId }: { diaryId: string }) {
     return <div className="min-h-screen bg-muted p-6">로딩 중...</div>;
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-muted p-6">
-        <Card className="rounded-sm">
-          <CardContent className="p-6 text-sm text-destructive">
-            {error}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-muted">
-      <div className="container max-w-5xl mx-auto py-8 pb-10">
+      <div className="container max-w-9xl mx-auto py-8 pb-10">
         <div className="flex h-16 max-w-3xl items-center gap-4">
           <Link href="/admin/users">
             <Button variant="ghost" size="icon">
